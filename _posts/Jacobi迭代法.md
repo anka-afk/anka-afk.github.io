@@ -1,3 +1,10 @@
+---
+title: jacobi迭代法
+excerpt: 一种迭代方法
+toc: true
+author: anka
+date: 2024.4.18
+---
 #定义 
 > 把系数矩阵写为 $A=D+L+U$﻿的形式
 > 

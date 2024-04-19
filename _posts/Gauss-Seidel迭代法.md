@@ -1,3 +1,10 @@
+---
+title: Gauss-Seidel迭代法
+excerpt: 一种迭代方法
+toc: true
+author: anka
+date: 2024.4.18
+---
 #定义 
 也称高斯-赛德尔迭代法
 观察 $Jacobi$ 迭代法, 我们发现, 在求 $\color{red}{x^{(k+1)}}\text{ }$ 的分量时,

@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Astro build output
+dist/
+.astro/
+
+# Sync cache & generated papers (re-synced automatically on build)
+.cache/
+src/content/papers/
+public/papers/
+
+# Logs & OS files
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example

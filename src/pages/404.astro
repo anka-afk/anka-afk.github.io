@@ -1,0 +1,354 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="404">
+  <section class="mx-auto my-6 max-w-2xl">
+    <div class="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+      <div>
+        <div class="font-mono text-xs font-semibold text-[var(--accent)]">ERROR 404 · LOCAL MINIMUM</div>
+        <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[var(--text)] sm:text-3xl">
+          卡在了局部极小值里
+        </h1>
+        <p class="mt-1.5 text-sm text-[var(--text-secondary)]">
+          你访问的页面不存在。点下方等高线任意位置投放初始点，或者直接回首页重新初始化。
+        </p>
+      </div>
+    </div>
+
+    <!-- Interactive 2D Loss Landscape -->
+    <div class="bento-card overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5 font-mono text-xs">
+        <div class="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5">
+          <button
+            type="button"
+            data-gd-opt="sgd"
+            class="cursor-pointer rounded-md bg-[var(--surface-soft)] px-2.5 py-1 font-semibold text-[var(--accent)] transition-colors"
+          >
+            SGD
+          </button>
+          <button
+            type="button"
+            data-gd-opt="momentum"
+            class="cursor-pointer rounded-md px-2.5 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            Momentum
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
+          <span id="gd-readout">loss: — · step: 0</span>
+          <button
+            id="gd-clear"
+            type="button"
+            class="cursor-pointer text-[var(--text-secondary)] transition-colors hover:text-[var(--accent)]"
+          >
+            清空轨迹
+          </button>
+        </div>
+      </div>
+
+      <canvas
+        id="gd-canvas"
+        class="block h-[300px] w-full cursor-crosshair sm:h-[340px]"
+        aria-label="二维损失曲面梯度下降交互画布"
+      ></canvas>
+    </div>
+
+    <div class="mt-6 flex flex-wrap items-center gap-4 text-xs">
+      <a
+        href="/"
+        class="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
+      >
+        回首页重新初始化 →
+      </a>
+      <a
+        href="/papers"
+        class="font-mono text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
+      >
+        阅读《推断智能》 ↗
+      </a>
+    </div>
+  </section>
+</BaseLayout>
+
+<script is:inline>
+  (() => {
+    let stopGd = null;
+
+    function initGdPlayground() {
+      const canvas = document.getElementById('gd-canvas');
+      const readout = document.getElementById('gd-readout');
+      const clearBtn = document.getElementById('gd-clear');
+      if (!(canvas instanceof HTMLCanvasElement)) return;
+      if (canvas.dataset.running === '1') return;
+
+      if (stopGd) {
+        stopGd();
+        stopGd = null;
+      }
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      canvas.dataset.running = '1';
+
+      // Domain [-3, 3] x [-2, 2]
+      const X_MIN = -3;
+      const X_MAX = 3;
+      const Y_MIN = -2;
+      const Y_MAX = 2;
+
+      // Multi-well non-convex loss landscape (1 deeper global minimum, 2 local minima, saddle ridges)
+      const WELLS = [
+        { cx: -1.5, cy: -0.35, amp: 1.32, s: 0.65 },
+        { cx: 1.4, cy: 0.25, amp: 1.92, s: 0.72 },
+        { cx: -0.05, cy: 1.08, amp: 0.88, s: 0.45 },
+      ];
+
+      function lossAt(x, y) {
+        let v = 0.1 * (x * x + y * y) + 1.95;
+        for (const w of WELLS) {
+          const dx = x - w.cx;
+          const dy = y - w.cy;
+          v -= w.amp * Math.exp(-(dx * dx + dy * dy) / w.s);
+        }
+        return v;
+      }
+
+      function gradAt(x, y) {
+        let gx = 0.2 * x;
+        let gy = 0.2 * y;
+        for (const w of WELLS) {
+          const dx = x - w.cx;
+          const dy = y - w.cy;
+          const e = w.amp * Math.exp(-(dx * dx + dy * dy) / w.s);
+          gx += e * ((2 * dx) / w.s);
+          gy += e * ((2 * dy) / w.s);
+        }
+        return [gx, gy];
+      }
+
+      let width = 0;
+      let height = 0;
+      let dpr = Math.min(window.devicePixelRatio || 1, 2);
+      let bgCanvas = document.createElement('canvas');
+      let optimizer = 'sgd';
+      let balls = [];
+      let rafId = 0;
+
+      function toCanvas(x, y) {
+        return [
+          ((x - X_MIN) / (X_MAX - X_MIN)) * width,
+          ((Y_MAX - y) / (Y_MAX - Y_MIN)) * height,
+        ];
+      }
+
+      function toDomain(px, py) {
+        return [
+          X_MIN + (px / Math.max(1, width)) * (X_MAX - X_MIN),
+          Y_MAX - (py / Math.max(1, height)) * (Y_MAX - Y_MIN),
+        ];
+      }
+
+      function renderContours() {
+        bgCanvas.width = Math.max(1, Math.floor(width));
+        bgCanvas.height = Math.max(1, Math.floor(height));
+        const bctx = bgCanvas.getContext('2d');
+        if (!bctx) return;
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const img = bctx.createImageData(bgCanvas.width, bgCanvas.height);
+        const data = img.data;
+
+        for (let py = 0; py < bgCanvas.height; py++) {
+          const y = Y_MAX - (py / bgCanvas.height) * (Y_MAX - Y_MIN);
+          for (let px = 0; px < bgCanvas.width; px++) {
+            const x = X_MIN + (px / bgCanvas.width) * (X_MAX - X_MIN);
+            const l = lossAt(x, y);
+            const norm = Math.max(0, Math.min(1, (l - 0.15) / 2.6));
+            // Subtle iso-loss contour lines
+            const band = Math.abs(((l * 6.5) % 1) - 0.5);
+            const isLine = band < 0.045;
+
+            let r, g, b;
+            if (isDark) {
+              r = Math.round(24 + norm * 34 + (isLine ? 22 : 0));
+              g = Math.round(16 + norm * 22 + (isLine ? 16 : 0));
+              b = Math.round(38 + norm * 52 + (isLine ? 34 : 0));
+            } else {
+              r = Math.round(234 + norm * 19 - (isLine ? 18 : 0));
+              g = Math.round(224 + norm * 25 - (isLine ? 20 : 0));
+              b = Math.round(247 + norm * 7 - (isLine ? 12 : 0));
+            }
+
+            const idx = (py * bgCanvas.width + px) * 4;
+            data[idx] = Math.max(0, Math.min(255, r));
+            data[idx + 1] = Math.max(0, Math.min(255, g));
+            data[idx + 2] = Math.max(0, Math.min(255, b));
+            data[idx + 3] = 255;
+          }
+        }
+        bctx.putImageData(img, 0, 0);
+
+        // Label minima softly
+        bctx.font = '600 10.5px JetBrains Mono, monospace';
+        bctx.textAlign = 'center';
+        bctx.fillStyle = isDark ? 'rgba(216, 186, 255, 0.72)' : 'rgba(99, 65, 142, 0.72)';
+        const [gx, gy] = toCanvas(1.4, 0.25);
+        bctx.fillText('global min', gx, gy + 18);
+        const [lx, ly] = toCanvas(-1.5, -0.35);
+        bctx.fillText('local min (404)', lx, ly + 18);
+      }
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        width = Math.max(280, Math.floor(rect.width));
+        height = Math.max(240, Math.floor(rect.height));
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        renderContours();
+      }
+
+      function dropBall(x, y) {
+        const hue = optimizer === 'momentum' ? 'momentum' : 'sgd';
+        balls.push({
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          opt: hue,
+          step: 0,
+          trail: [[x, y]],
+          done: false,
+        });
+        if (balls.length > 8) balls.shift();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(bgCanvas, 0, 0, width, height);
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const primary = isDark ? '#D8BAFF' : '#63418E';
+        const momentumColor = isDark ? '#5EEAD4' : '#0D9488';
+
+        for (const ball of balls) {
+          if (!ball.done && ball.step < 260) {
+            const [gx, gy] = gradAt(ball.x, ball.y);
+            if (ball.opt === 'momentum') {
+              const lr = 0.045;
+              const beta = 0.88;
+              ball.vx = beta * ball.vx - lr * gx;
+              ball.vy = beta * ball.vy - lr * gy;
+              ball.x += ball.vx;
+              ball.y += ball.vy;
+            } else {
+              const lr = 0.065;
+              ball.x -= lr * gx;
+              ball.y -= lr * gy;
+            }
+            ball.x = Math.max(X_MIN + 0.05, Math.min(X_MAX - 0.05, ball.x));
+            ball.y = Math.max(Y_MIN + 0.05, Math.min(Y_MAX - 0.05, ball.y));
+            ball.step += 1;
+            ball.trail.push([ball.x, ball.y]);
+            if (Math.hypot(gx, gy) < 0.015 && Math.hypot(ball.vx, ball.vy) < 0.004) {
+              ball.done = true;
+            }
+          }
+
+          const color = ball.opt === 'momentum' ? momentumColor : primary;
+
+          // Trail
+          if (ball.trail.length > 1) {
+            ctx.beginPath();
+            ball.trail.forEach(([tx, ty], i) => {
+              const [px, py] = toCanvas(tx, ty);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.78;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+
+          // Ball
+          const [bx, by] = toCanvas(ball.x, ball.y);
+          ctx.beginPath();
+          ctx.arc(bx, by, 5.5, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = isDark ? '#110D18' : '#FFFFFF';
+          ctx.stroke();
+        }
+
+        const active = balls[balls.length - 1];
+        if (active && readout) {
+          readout.textContent = `loss: ${lossAt(active.x, active.y).toFixed(4)} · step: ${active.step}`;
+        }
+
+        rafId = window.requestAnimationFrame(draw);
+      }
+
+      const optBtns = Array.from(document.querySelectorAll('[data-gd-opt]'));
+      optBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          optimizer = btn.getAttribute('data-gd-opt') || 'sgd';
+          optBtns.forEach((b) => {
+            const on = b === btn;
+            b.classList.toggle('bg-[var(--surface-soft)]', on);
+            b.classList.toggle('text-[var(--accent)]', on);
+            b.classList.toggle('font-semibold', on);
+            b.classList.toggle('text-[var(--text-muted)]', !on);
+          });
+        });
+      });
+
+      clearBtn?.addEventListener('click', () => {
+        balls = [];
+        if (readout) readout.textContent = 'loss: — · step: 0';
+      });
+
+      const onCanvasClick = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const [x, y] = toDomain(e.clientX - rect.left, e.clientY - rect.top);
+        dropBall(x, y);
+      };
+
+      const onThemeChange = () => renderContours();
+
+      canvas.addEventListener('click', onCanvasClick);
+      window.addEventListener('resize', resize, { passive: true });
+      window.addEventListener('anka-theme-change', onThemeChange);
+
+      resize();
+      // Drop one subtle demo ball near the ridge so it rolls alive immediately
+      dropBall(-0.45, -0.95);
+      rafId = window.requestAnimationFrame(draw);
+
+      stopGd = () => {
+        window.cancelAnimationFrame(rafId);
+        canvas.removeEventListener('click', onCanvasClick);
+        window.removeEventListener('resize', resize);
+        window.removeEventListener('anka-theme-change', onThemeChange);
+        delete canvas.dataset.running;
+      };
+    }
+
+    if (!window.__ankaGdBound) {
+      window.__ankaGdBound = true;
+      document.addEventListener('astro:page-load', initGdPlayground);
+      document.addEventListener('astro:before-swap', () => {
+        if (stopGd) {
+          stopGd();
+          stopGd = null;
+        }
+      });
+    }
+    initGdPlayground();
+  })();
+</script>

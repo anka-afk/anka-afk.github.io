@@ -1,0 +1,301 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AttentionCanvas from '../components/AttentionCanvas.astro';
+import { PROJECTS, SITE } from '../site.config';
+import { formatDate } from '../utils/format';
+
+const allPapers = (await getCollection('papers')).sort((a, b) => b.data.order - a.data.order);
+const allBlog = (await getCollection('blog'))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+
+const featuredProjects = PROJECTS.filter((p) => p.featured);
+---
+
+<BaseLayout>
+  <!-- Open Hero over Interactive Attention Canvas -->
+  <section
+    class="relative overflow-hidden rounded-3xl border-b border-[var(--border)] px-2 pt-5 pb-12 sm:px-4 sm:pt-8 sm:pb-14"
+    aria-label="个人简介"
+  >
+    <AttentionCanvas />
+
+    <div class="relative z-10">
+      <div class="flex items-center gap-4">
+        <img
+          id="hero-avatar"
+          src={SITE.avatar}
+          alt={SITE.author}
+          width="60"
+          height="60"
+          class="h-15 w-15 cursor-pointer select-none rounded-2xl border border-[var(--border-strong)] object-cover shadow-xs transition-transform active:scale-95"
+        />
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight text-[var(--text)] sm:text-3xl">
+            Hi, I'm {SITE.author}
+          </h1>
+          <p class="mt-1 font-mono text-xs text-[var(--text-muted)]">
+            {SITE.tagline}
+          </p>
+        </div>
+      </div>
+
+      <p class="mt-5 max-w-2xl text-[15px] leading-relaxed text-[var(--text-secondary)]">
+        {SITE.bio}
+      </p>
+
+      <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <a
+          href="/papers"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
+        >
+          <span>阅读《推断智能》</span>
+          <span aria-hidden="true">→</span>
+        </a>
+
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+          <a
+            href={SITE.social.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="transition-colors hover:text-[var(--accent)]"
+          >
+            GitHub ↗
+          </a>
+          <a
+            href={SITE.social.bilibili}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="transition-colors hover:text-[var(--accent)]"
+          >
+            Bilibili ↗
+          </a>
+          <button
+            id="copy-email-btn"
+            type="button"
+            data-email={SITE.email}
+            class="cursor-pointer font-mono transition-colors hover:text-[var(--accent)]"
+          >
+            <span id="copy-email-label">{SITE.email}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 1: Inferring-Intelligence (Clean Borderless Editorial List) -->
+  <section class="mt-14" aria-label="推断智能论文精读">
+    <div class="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <h2 class="text-lg font-extrabold tracking-tight text-[var(--text)]">《{SITE.series.name}》</h2>
+          <span class="font-mono text-xs text-[var(--text-muted)]">Inferring-Intelligence</span>
+        </div>
+        <p class="mt-1 text-xs text-[var(--text-muted)]">{SITE.series.tagline}</p>
+      </div>
+      <a
+        href="/papers"
+        class="shrink-0 font-mono text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
+      >
+        全部 {allPapers.length} 篇 →
+      </a>
+    </div>
+
+    <div class="divide-y divide-[var(--border)] border-t border-b border-[var(--border)]">
+      {
+        allPapers.slice(0, 4).map((paper) => (
+          <a
+            href={`/papers/${paper.id}`}
+            class="group -mx-3 block rounded-xl px-3 py-5 transition-colors hover:bg-[var(--surface-soft)]/35"
+          >
+            <div class="flex flex-col justify-between gap-2 sm:flex-row sm:items-baseline">
+              <div class="flex min-w-0 items-baseline gap-3">
+                <span class="shrink-0 font-mono text-xs font-semibold text-[var(--accent)]">
+                  #{paper.data.number}
+                </span>
+                <h3 class="truncate text-base font-bold text-[var(--text)] transition-colors group-hover:text-[var(--accent)]">
+                  {paper.data.displayTitle}
+                </h3>
+              </div>
+              <div class="flex shrink-0 items-center gap-2.5 pl-8 font-mono text-xs text-[var(--text-muted)] sm:pl-0">
+                {paper.data.venue && (
+                  <span class="hidden max-w-[180px] truncate md:inline">
+                    {paper.data.venue.split('（')[0]}
+                  </span>
+                )}
+                <span>{paper.data.readingMinutes} min</span>
+                <span>·</span>
+                <time>{formatDate(paper.data.updatedAt)}</time>
+              </div>
+            </div>
+            <p class="mt-1.5 line-clamp-2 pl-8 text-sm leading-relaxed text-[var(--text-secondary)]">
+              {paper.data.summary}
+            </p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Section 2: Maintained Projects -->
+  <section class="mt-16" aria-label="开源项目">
+    <div class="mb-5 flex items-baseline justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-extrabold tracking-tight text-[var(--text)]">开源项目</h2>
+        <p class="mt-1 text-xs text-[var(--text-muted)]">平时参与维护的项目与插件</p>
+      </div>
+      <a
+        href="/projects"
+        class="shrink-0 font-mono text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
+      >
+        查看全部 →
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {
+        featuredProjects.map((project, idx) => (
+          <a
+            href={project.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class:list={[
+              'bento-card bento-card-hover group flex flex-col justify-between p-5',
+              featuredProjects.length % 2 === 1 && idx === 0 ? 'sm:col-span-2' : '',
+            ]}
+          >
+            <div>
+              <div class="flex items-baseline justify-between gap-3">
+                <h3 class="truncate font-mono text-sm font-bold text-[var(--text)] transition-colors group-hover:text-[var(--accent)]">
+                  {project.name}
+                </h3>
+                {project.stars ? (
+                  <span class="shrink-0 font-mono text-xs text-[var(--accent)]">
+                    ★ {project.stars}
+                  </span>
+                ) : (
+                  <span class="shrink-0 font-mono text-[11px] text-[var(--text-muted)]">
+                    {project.repo}
+                  </span>
+                )}
+              </div>
+              <p class="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
+                {project.description}
+              </p>
+            </div>
+            <div class="mt-4 flex items-center justify-between font-mono text-[11px] text-[var(--text-muted)]">
+              <span class="inline-flex items-center gap-1.5">
+                <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]/80" />
+                {project.language}
+              </span>
+              <span class="transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--accent)]">
+                GitHub ↗
+              </span>
+            </div>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Section 3: Recent Writing (Minimal Borderless Rows) -->
+  {
+    allBlog.length > 0 && (
+      <section class="mt-16" aria-label="最新随笔">
+        <div class="mb-4 flex items-baseline justify-between gap-4">
+          <h2 class="text-lg font-extrabold tracking-tight text-[var(--text)]">随笔</h2>
+          <a
+            href="/blog"
+            class="font-mono text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
+          >
+            全部随笔 →
+          </a>
+        </div>
+
+        <div class="divide-y divide-[var(--border)] border-t border-b border-[var(--border)]">
+          {allBlog.slice(0, 5).map((post) => (
+            <a
+              href={`/blog/${post.id}`}
+              class="group -mx-3 flex flex-col justify-between gap-1 rounded-xl px-3 py-3.5 transition-colors hover:bg-[var(--surface-soft)]/35 sm:flex-row sm:items-baseline"
+            >
+              <span class="text-sm font-semibold text-[var(--text)] transition-colors group-hover:text-[var(--accent)]">
+                {post.data.title}
+              </span>
+              <time class="shrink-0 font-mono text-xs text-[var(--text-muted)]">
+                {formatDate(post.data.publishedAt)}
+              </time>
+            </a>
+          ))}
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>
+
+<div id="home-temp-toast" class="anka-toast" role="status" aria-live="polite">
+  <span class="inline-block h-2 w-2 rounded-full bg-[var(--accent)]"></span>
+  <span id="home-temp-toast-text"></span>
+</div>
+
+<script is:inline>
+  (() => {
+    function initHomeInteractions() {
+      const btn = document.getElementById('copy-email-btn');
+      const label = document.getElementById('copy-email-label');
+      if (btn && label && btn.dataset.bound !== '1') {
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', async () => {
+          const email = btn.dataset.email || '';
+          try {
+            await navigator.clipboard.writeText(email);
+            const orig = label.textContent;
+            label.textContent = '已复制邮箱 ✓';
+            setTimeout(() => (label.textContent = orig), 1500);
+          } catch {
+            window.location.href = `mailto:${email}`;
+          }
+        });
+      }
+
+      // 5-click Avatar Easter Egg -> Temperature = 2.0 Attention sampling mode
+      const avatar = document.getElementById('hero-avatar');
+      if (avatar && avatar.dataset.bound !== '1') {
+        avatar.dataset.bound = '1';
+        let clicks = 0;
+        let resetTimer = null;
+        avatar.addEventListener('click', () => {
+          clicks += 1;
+          clearTimeout(resetTimer);
+          if (clicks >= 5) {
+            clicks = 0;
+            window.dispatchEvent(new CustomEvent('anka-temperature-toggle'));
+          } else {
+            resetTimer = setTimeout(() => {
+              clicks = 0;
+            }, 2200);
+          }
+        });
+      }
+    }
+
+    if (!window.__ankaHomeInit) {
+      window.__ankaHomeInit = true;
+      document.addEventListener('astro:page-load', initHomeInteractions);
+      let toastTimer = null;
+      window.addEventListener('anka-temperature-changed', (e) => {
+        const toast = document.getElementById('home-temp-toast');
+        const text = document.getElementById('home-temp-toast-text');
+        if (!toast || !text) return;
+        const high = Boolean(e.detail?.high);
+        text.textContent = high
+          ? 'Temperature = 2.0 · 高温采样中（连点头像 5 下降温）'
+          : 'Temperature = 0.7 · 已恢复常规采样';
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+      });
+    }
+    initHomeInteractions();
+  })();
+</script>

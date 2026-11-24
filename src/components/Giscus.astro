@@ -1,0 +1,124 @@
+---
+import { SITE } from '../site.config';
+
+const { giscus } = SITE;
+const isConfigured = Boolean(giscus.enabled && giscus.repo && giscus.repoId && giscus.categoryId);
+const showDevHint = import.meta.env.DEV && giscus.enabled && !isConfigured;
+---
+
+{
+  (isConfigured || showDevHint) && (
+    <section class="mt-14 border-t border-[var(--border)] pt-10" aria-label="评论区">
+      <div class="mb-5 flex items-center justify-between">
+        <h2 class="flex items-center gap-2 text-base font-bold text-[var(--text)]">
+          <svg
+            class="h-4 w-4 text-[var(--accent)]"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          讨论与评论
+        </h2>
+        <span class="font-mono text-[11px] text-[var(--text-muted)]">Powered by Giscus</span>
+      </div>
+
+      {isConfigured ? (
+        <div
+          id="giscus-container"
+          data-repo={giscus.repo}
+          data-repo-id={giscus.repoId}
+          data-category={giscus.category}
+          data-category-id={giscus.categoryId}
+          data-mapping={giscus.mapping}
+          data-lang={giscus.lang}
+        />
+      ) : (
+        <div class="bento-card p-5 text-sm text-[var(--text-secondary)]">
+          <p class="font-medium text-[var(--text)]">Giscus 评论已就绪（仅本地开发可见此提示）：</p>
+          <ol class="mt-2 list-decimal space-y-1 pl-5 text-xs leading-relaxed text-[var(--text-muted)]">
+            <li>
+              在 GitHub 仓库 <code class="text-[var(--accent)]">{giscus.repo}</code> 的 Settings 中开启{' '}
+              <strong>Discussions</strong> 并安装{' '}
+              <a
+                href="https://github.com/apps/giscus"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-[var(--accent)] underline"
+              >
+                Giscus App
+              </a>
+              。
+            </li>
+            <li>
+              前往{' '}
+              <a
+                href="https://giscus.app/zh-CN"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-[var(--accent)] underline"
+              >
+                giscus.app
+              </a>{' '}
+              获取 <code class="text-[var(--accent)]">repoId</code> 和{' '}
+              <code class="text-[var(--accent)]">categoryId</code>，填入{' '}
+              <code class="text-[var(--accent)]">src/site.config.ts</code> 即可上线启用（未配置时生产环境自动隐藏）。
+            </li>
+          </ol>
+        </div>
+      )}
+    </section>
+  )
+}
+
+{
+  isConfigured && (
+    <script is:inline>
+      (() => {
+        function getGiscusTheme() {
+          return document.documentElement.classList.contains('dark') ? 'dark_dimmed' : 'light';
+        }
+
+        function mountGiscus() {
+          const container = document.getElementById('giscus-container');
+          if (!container || container.dataset.mounted === '1') return;
+          container.dataset.mounted = '1';
+
+          const script = document.createElement('script');
+          script.src = 'https://giscus.app/client.js';
+          script.async = true;
+          script.crossOrigin = 'anonymous';
+          script.setAttribute('data-repo', container.dataset.repo || '');
+          script.setAttribute('data-repo-id', container.dataset.repoId || '');
+          script.setAttribute('data-category', container.dataset.category || 'Announcements');
+          script.setAttribute('data-category-id', container.dataset.categoryId || '');
+          script.setAttribute('data-mapping', container.dataset.mapping || 'pathname');
+          script.setAttribute('data-strict', '0');
+          script.setAttribute('data-reactions-enabled', '1');
+          script.setAttribute('data-emit-metadata', '0');
+          script.setAttribute('data-input-position', 'top');
+          script.setAttribute('data-theme', getGiscusTheme());
+          script.setAttribute('data-lang', container.dataset.lang || 'zh-CN');
+          script.setAttribute('data-loading', 'lazy');
+          container.appendChild(script);
+        }
+
+        if (!window.__ankaGiscusBound) {
+          window.__ankaGiscusBound = true;
+          document.addEventListener('astro:page-load', mountGiscus);
+          window.addEventListener('anka-theme-change', () => {
+            const iframe = document.querySelector('iframe.giscus-frame');
+            if (!iframe || !iframe.contentWindow) return;
+            iframe.contentWindow.postMessage(
+              { giscus: { setConfig: { theme: getGiscusTheme() } } },
+              'https://giscus.app'
+            );
+          });
+        }
+        mountGiscus();
+      })();
+    </script>
+  )
+}

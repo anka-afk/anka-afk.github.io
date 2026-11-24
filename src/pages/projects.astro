@@ -1,0 +1,118 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { PROJECTS, SITE, type ProjectItem } from '../site.config';
+
+const categories: Array<{ key: ProjectItem['category']; title: string; subtitle: string }> = [
+  {
+    key: 'AstrBot',
+    title: 'AstrBot 相关',
+    subtitle: '参与主仓维护以及几个持续更新的插件。',
+  },
+  {
+    key: 'Research',
+    title: '笔记与专栏',
+    subtitle: '前沿论文的数学推导与阅读手稿整理。',
+  },
+];
+---
+
+<BaseLayout title="项目" description="anka 平时参与维护的开源项目与研究笔记">
+  <header class="border-b border-[var(--border)] pb-8">
+    <div class="flex flex-wrap items-baseline justify-between gap-3">
+      <h1 class="text-3xl font-extrabold tracking-tight text-[var(--text)]">项目</h1>
+      <a
+        href={SITE.social.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="font-mono text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
+      >
+        github.com/{SITE.handle} ↗
+      </a>
+    </div>
+    <p class="mt-2.5 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">
+      记录平时参与维护的一些开源项目与笔记仓库。
+    </p>
+  </header>
+
+  <div class="mt-10 space-y-12">
+    {
+      categories.map((cat) => {
+        const list = PROJECTS.filter((p) => p.category === cat.key);
+        if (!list.length) return null;
+        return (
+          <section>
+            <div class="mb-5">
+              <h2 class="text-lg font-extrabold tracking-tight text-[var(--text)]">{cat.title}</h2>
+              <p class="mt-1 text-xs text-[var(--text-muted)]">{cat.subtitle}</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {list.map((project, idx) => (
+                <article
+                  class:list={[
+                    'bento-card bento-card-hover flex flex-col justify-between p-5',
+                    list.length % 2 === 1 && idx === 0 ? 'md:col-span-2' : '',
+                  ]}
+                >
+                  <div>
+                    <div class="flex flex-wrap items-baseline justify-between gap-3">
+                      <h3 class="font-mono text-base font-bold text-[var(--text)]">
+                        {project.name}
+                      </h3>
+                      {project.stars ? (
+                        <span class="shrink-0 font-mono text-xs font-semibold text-[var(--accent)]">
+                          ★ {project.stars}
+                        </span>
+                      ) : (
+                        <span class="shrink-0 font-mono text-xs text-[var(--text-muted)]">
+                          {project.repo}
+                        </span>
+                      )}
+                    </div>
+
+                    <p class="mt-2.5 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      {project.description}
+                    </p>
+                  </div>
+
+                  <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3.5 text-xs">
+                    <div class="flex flex-wrap items-center gap-2 font-mono text-[11px] text-[var(--text-muted)]">
+                      <span class="inline-flex items-center gap-1.5">
+                        <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                        {project.language}
+                      </span>
+                      {project.tags.slice(0, 3).map((tag) => (
+                        <span>#{tag}</span>
+                      ))}
+                    </div>
+
+                    <div class="flex items-center gap-3 font-mono text-xs">
+                      {project.demoUrl && (
+                        <a
+                          href={project.demoUrl}
+                          target={project.demoUrl.startsWith('http') ? '_blank' : undefined}
+                          rel={project.demoUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
+                          class="font-semibold text-[var(--accent)] hover:underline"
+                        >
+                          {project.demoUrl.startsWith('http') ? '官网 / 文档 ↗' : '在线阅读 →'}
+                        </a>
+                      )}
+                      <a
+                        href={project.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-[var(--text-muted)] hover:text-[var(--accent)]"
+                      >
+                        GitHub ↗
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        );
+      })
+    }
+  </div>
+</BaseLayout>

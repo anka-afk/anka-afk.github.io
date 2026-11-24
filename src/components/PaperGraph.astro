@@ -1,0 +1,491 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  papers: CollectionEntry<'papers'>[];
+}
+
+const { papers } = Astro.props;
+
+// Infer conceptual domain clusters automatically from each paper's title/topics/summary
+// so the graph naturally grows as new manuscripts are pushed to Inferring-Intelligence.
+interface ClusterRule {
+  id: string;
+  label: string;
+  match: RegExp;
+}
+
+const CLUSTER_RULES: ClusterRule[] = [
+  { id: 'cluster-pref', label: '偏好优化 / DPO', match: /dpo|偏好|最大似然|kl/i },
+  { id: 'cluster-rl', label: '强化学习 / 后训练', match: /强化学习|rl|奖励|策略|自我纠错|score|dpo|eto/i },
+  { id: 'cluster-agent', label: 'Agent / 轨迹探索', match: /agent|轨迹|探索|eto/i },
+  { id: 'cluster-arch', label: '序列架构 / SSM', match: /mamba|状态空间|ssm|扫描|架构|transformer/i },
+];
+
+const graphNodes: Array<{
+  id: string;
+  kind: 'paper' | 'concept';
+  label: string;
+  shortLabel: string;
+  number?: string;
+  venue?: string;
+  summary?: string;
+  url?: string;
+  topics?: string[];
+}> = [];
+
+const graphLinks: Array<{ source: string; target: string }> = [];
+const activeClusters = new Set<string>();
+
+for (const paper of papers) {
+  const shortName =
+    paper.data.displayTitle.split(/[:：]/)[0].trim().slice(0, 22) || `#${paper.data.number}`;
+  const paperNodeId = `paper-${paper.id}`;
+  graphNodes.push({
+    id: paperNodeId,
+    kind: 'paper',
+    label: paper.data.displayTitle,
+    shortLabel: `#${paper.data.number} ${shortName}`,
+    number: paper.data.number,
+    venue: paper.data.venue,
+    summary: paper.data.summary,
+    url: `/papers/${paper.id}`,
+    topics: paper.data.topics,
+  });
+
+  const hay = `${paper.id} ${paper.data.title} ${paper.data.displayTitle} ${paper.data.topics.join(' ')} ${paper.data.summary}`;
+  let matchedAny = false;
+  for (const rule of CLUSTER_RULES) {
+    if (rule.match.test(hay)) {
+      activeClusters.add(rule.id);
+      graphLinks.push({ source: paperNodeId, target: rule.id });
+      matchedAny = true;
+    }
+  }
+  if (!matchedAny) {
+    activeClusters.add('cluster-general');
+    graphLinks.push({ source: paperNodeId, target: 'cluster-general' });
+  }
+}
+
+for (const rule of CLUSTER_RULES) {
+  if (activeClusters.has(rule.id)) {
+    graphNodes.push({
+      id: rule.id,
+      kind: 'concept',
+      label: rule.label,
+      shortLabel: rule.label,
+    });
+  }
+}
+if (activeClusters.has('cluster-general')) {
+  graphNodes.push({
+    id: 'cluster-general',
+    kind: 'concept',
+    label: '前沿算法',
+    shortLabel: '前沿算法',
+  });
+}
+
+const graphPayload = JSON.stringify({ nodes: graphNodes, links: graphLinks }).replace(
+  /<\/script/gi,
+  '<\\/script'
+);
+---
+
+<div id="paper-graph-view" class="mt-6 hidden">
+  <div class="bento-card relative overflow-hidden">
+    <!-- Subtle dot grid background -->
+    <div
+      class="pointer-events-none absolute inset-0 opacity-45"
+      style="background-image: radial-gradient(var(--border-strong) 1px, transparent 1px); background-size: 22px 22px;"
+    >
+    </div>
+
+    <!-- Minimal Legend Bar -->
+    <div
+      class="relative z-10 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface)]/80 px-4 py-2.5 font-mono text-[11px] text-[var(--text-muted)] backdrop-blur-xs"
+    >
+      <span class="inline-flex items-center gap-1.5">
+        <span class="h-2.5 w-2.5 rounded-full bg-[var(--accent)]"></span>
+        论文
+      </span>
+      <span class="inline-flex items-center gap-1.5">
+        <span class="h-2 w-2 rounded-full border border-[var(--accent)] bg-[var(--surface-soft)]"></span>
+        脉络
+      </span>
+    </div>
+
+    <svg
+      id="paper-graph-svg"
+      viewBox="0 0 880 420"
+      class="relative z-10 block h-[380px] w-full select-none sm:h-[420px]"
+      role="img"
+      aria-label="《推断智能》论文知识脉络图"
+    >
+      <g id="graph-edges"></g>
+      <g id="graph-nodes"></g>
+    </svg>
+
+    <!-- Hover / Selected Preview Bar -->
+    <div
+      id="graph-preview"
+      class="relative z-10 flex flex-col justify-between gap-2 border-t border-[var(--border)] bg-[var(--surface)]/90 px-5 py-3.5 sm:flex-row sm:items-center"
+    >
+      <div class="min-w-0">
+        <div id="graph-preview-title" class="truncate text-sm font-bold text-[var(--text)]">
+          《推断智能》论文脉络
+        </div>
+        <p id="graph-preview-desc" class="mt-0.5 line-clamp-1 text-xs text-[var(--text-muted)]">
+          悬停节点查看摘要，点击论文进入阅读
+        </p>
+      </div>
+      <a
+        id="graph-preview-link"
+        href="/papers"
+        class="hidden shrink-0 font-mono text-xs font-semibold text-[var(--accent)] hover:underline"
+      >
+        进入精读 →
+      </a>
+    </div>
+  </div>
+
+  <script id="paper-graph-data" type="application/json" set:html={graphPayload} />
+</div>
+
+<script is:inline>
+  (() => {
+    let stopSim = null;
+
+    function initPaperGraph() {
+      if (stopSim) {
+        stopSim();
+        stopSim = null;
+      }
+
+      const dataEl = document.getElementById('paper-graph-data');
+      const svg = document.getElementById('paper-graph-svg');
+      const edgesG = document.getElementById('graph-edges');
+      const nodesG = document.getElementById('graph-nodes');
+      const previewTitle = document.getElementById('graph-preview-title');
+      const previewDesc = document.getElementById('graph-preview-desc');
+      const previewLink = document.getElementById('graph-preview-link');
+      if (!dataEl || !svg || !edgesG || !nodesG) return;
+
+      let raw = { nodes: [], links: [] };
+      try {
+        raw = JSON.parse(dataEl.textContent || '{}');
+      } catch {
+        return;
+      }
+
+      const W = 880;
+      const H = 420;
+      const cx = W / 2;
+      const cy = H / 2;
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+
+      const paperNodes = raw.nodes.filter((n) => n.kind === 'paper');
+      const conceptNodes = raw.nodes.filter((n) => n.kind === 'concept');
+
+      // Deterministic, balanced initial placement
+      const simNodes = raw.nodes.map((n) => {
+        if (n.kind === 'concept') {
+          const idx = conceptNodes.indexOf(n);
+          const angle = (idx / Math.max(1, conceptNodes.length)) * Math.PI * 2 - Math.PI / 4;
+          return {
+            ...n,
+            x: cx + Math.cos(angle) * 125,
+            y: cy + Math.sin(angle) * 82,
+            vx: 0,
+            vy: 0,
+            r: 10,
+          };
+        }
+        const idx = paperNodes.indexOf(n);
+        const angle = (idx / Math.max(1, paperNodes.length)) * Math.PI * 2 + Math.PI / 6;
+        return {
+          ...n,
+          x: cx + Math.cos(angle) * 255,
+          y: cy + Math.sin(angle) * 130,
+          vx: 0,
+          vy: 0,
+          r: 17,
+        };
+      });
+
+      const nodeById = new Map(simNodes.map((n) => [n.id, n]));
+      const simLinks = raw.links
+        .map((l) => ({ source: nodeById.get(l.source), target: nodeById.get(l.target) }))
+        .filter((l) => l.source && l.target);
+
+      edgesG.replaceChildren();
+      nodesG.replaceChildren();
+
+      const edgeEls = simLinks.map((l) => {
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('stroke', 'var(--border-strong)');
+        line.setAttribute('stroke-width', '1.4');
+        line.setAttribute('stroke-opacity', '0.75');
+        edgesG.appendChild(line);
+        return { el: line, link: l };
+      });
+
+      let draggingNode = null;
+      let dragMoved = false;
+      let hoveredId = null;
+
+      function updateHighlight() {
+        edgeEls.forEach(({ el, link }) => {
+          const connected =
+            !hoveredId || link.source.id === hoveredId || link.target.id === hoveredId;
+          el.setAttribute('stroke', hoveredId && connected ? 'var(--accent)' : 'var(--border-strong)');
+          el.setAttribute('stroke-width', hoveredId && connected ? '2.2' : '1.3');
+          el.setAttribute('stroke-opacity', hoveredId ? (connected ? '0.95' : '0.2') : '0.72');
+        });
+
+        nodeEls.forEach(({ g, node }) => {
+          if (!hoveredId) {
+            g.style.opacity = '1';
+            return;
+          }
+          const isNeighbor =
+            node.id === hoveredId ||
+            simLinks.some(
+              (l) =>
+                (l.source.id === hoveredId && l.target.id === node.id) ||
+                (l.target.id === hoveredId && l.source.id === node.id)
+            );
+          g.style.opacity = isNeighbor ? '1' : '0.32';
+        });
+      }
+
+      function updatePreview(node) {
+        if (!previewTitle || !previewDesc || !previewLink) return;
+        if (!node) return;
+        if (node.kind === 'paper') {
+          previewTitle.textContent = `#${node.number} ${node.label}`;
+          previewDesc.textContent = node.summary || '';
+          previewLink.setAttribute('href', node.url || '/papers');
+          previewLink.classList.remove('hidden');
+        } else {
+          const connectedPapers = simLinks
+            .filter((l) => l.target.id === node.id || l.source.id === node.id)
+            .map((l) => (l.source.kind === 'paper' ? l.source : l.target))
+            .map((p) => `#${p.number} ${p.shortLabel.replace(/^#\d+\s*/, '')}`);
+          previewTitle.textContent = `研究脉络：${node.label}`;
+          previewDesc.textContent = `关联手稿：${connectedPapers.join(' · ')}`;
+          previewLink.classList.add('hidden');
+        }
+      }
+
+      const nodeEls = simNodes.map((node) => {
+        const g = document.createElementNS(SVG_NS, 'g');
+        g.style.cursor = node.kind === 'paper' ? 'pointer' : 'grab';
+        g.style.transition = 'opacity 0.16s ease';
+
+        if (node.kind === 'paper') {
+          const halo = document.createElementNS(SVG_NS, 'circle');
+          halo.setAttribute('r', String(node.r + 7));
+          halo.setAttribute('fill', 'var(--accent)');
+          halo.setAttribute('fill-opacity', '0.12');
+          g.appendChild(halo);
+        }
+
+        const circle = document.createElementNS(SVG_NS, 'circle');
+        circle.setAttribute('r', String(node.r));
+        if (node.kind === 'paper') {
+          circle.setAttribute('fill', 'var(--accent)');
+          circle.setAttribute('stroke', 'var(--surface)');
+          circle.setAttribute('stroke-width', '2.5');
+        } else {
+          circle.setAttribute('fill', 'var(--surface-soft)');
+          circle.setAttribute('stroke', 'var(--accent)');
+          circle.setAttribute('stroke-width', '1.6');
+        }
+        g.appendChild(circle);
+
+        if (node.kind === 'paper') {
+          const numText = document.createElementNS(SVG_NS, 'text');
+          numText.setAttribute('text-anchor', 'middle');
+          numText.setAttribute('dominant-baseline', 'central');
+          numText.setAttribute('fill', 'var(--bg)');
+          numText.setAttribute('font-size', '10.5');
+          numText.setAttribute('font-weight', '700');
+          numText.setAttribute('font-family', 'JetBrains Mono, monospace');
+          numText.textContent = node.number || '';
+          g.appendChild(numText);
+        }
+
+        const label = document.createElementNS(SVG_NS, 'text');
+        label.setAttribute('y', String(node.r + 16));
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('fill', node.kind === 'paper' ? 'var(--text)' : 'var(--text-secondary)');
+        label.setAttribute('font-size', node.kind === 'paper' ? '12' : '11');
+        label.setAttribute('font-weight', node.kind === 'paper' ? '700' : '500');
+        label.textContent =
+          node.kind === 'paper' ? node.shortLabel.replace(/^#\d+\s*/, '') : node.label;
+        g.appendChild(label);
+
+        g.addEventListener('pointerenter', () => {
+          hoveredId = node.id;
+          updateHighlight();
+          updatePreview(node);
+        });
+
+        g.addEventListener('pointerleave', () => {
+          if (!draggingNode) {
+            hoveredId = null;
+            updateHighlight();
+          }
+        });
+
+        g.addEventListener('pointerdown', (e) => {
+          draggingNode = node;
+          dragMoved = false;
+          g.setPointerCapture?.(e.pointerId);
+        });
+
+        g.addEventListener('click', () => {
+          if (dragMoved) return;
+          if (node.kind === 'paper' && node.url) {
+            window.location.href = node.url;
+          }
+        });
+
+        nodesG.appendChild(g);
+        return { g, node };
+      });
+
+      function svgPoint(e) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: ((e.clientX - rect.left) / Math.max(1, rect.width)) * W,
+          y: ((e.clientY - rect.top) / Math.max(1, rect.height)) * H,
+        };
+      }
+
+      function onPointerMove(e) {
+        if (!draggingNode) return;
+        dragMoved = true;
+        const pt = svgPoint(e);
+        draggingNode.x = Math.max(48, Math.min(W - 48, pt.x));
+        draggingNode.y = Math.max(36, Math.min(H - 48, pt.y));
+        draggingNode.vx = 0;
+        draggingNode.vy = 0;
+      }
+
+      function onPointerUp() {
+        if (draggingNode) {
+          draggingNode = null;
+          setTimeout(() => {
+            dragMoved = false;
+          }, 0);
+        }
+      }
+
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('pointerup', onPointerUp, { passive: true });
+
+      // Gentle force-directed relaxation loop
+      let rafId = 0;
+      let ticks = 0;
+      function step() {
+        ticks += 1;
+        // Pairwise repulsion
+        for (let i = 0; i < simNodes.length; i++) {
+          for (let j = i + 1; j < simNodes.length; j++) {
+            const a = simNodes[i];
+            const b = simNodes[j];
+            const dx = b.x - a.x || 0.01;
+            const dy = b.y - a.y || 0.01;
+            const dist = Math.hypot(dx, dy) || 1;
+            const minSep = a.kind === 'paper' && b.kind === 'paper' ? 210 : 120;
+            if (dist < minSep) {
+              const force = ((minSep - dist) / minSep) * 0.42;
+              const fx = (dx / dist) * force;
+              const fy = (dy / dist) * force;
+              if (a !== draggingNode) {
+                a.vx -= fx;
+                a.vy -= fy;
+              }
+              if (b !== draggingNode) {
+                b.vx += fx;
+                b.vy += fy;
+              }
+            }
+          }
+        }
+
+        // Link springs
+        for (const l of simLinks) {
+          const dx = l.target.x - l.source.x;
+          const dy = l.target.y - l.source.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const targetLen = 148;
+          const force = (dist - targetLen) * 0.008;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          if (l.source !== draggingNode) {
+            l.source.vx += fx;
+            l.source.vy += fy;
+          }
+          if (l.target !== draggingNode) {
+            l.target.vx -= fx;
+            l.target.vy -= fy;
+          }
+        }
+
+        // Center gravity + velocity damping
+        for (const n of simNodes) {
+          if (n === draggingNode) continue;
+          n.vx += (cx - n.x) * 0.0018;
+          n.vy += (cy - n.y) * 0.0024;
+          n.vx *= 0.86;
+          n.vy *= 0.86;
+          n.x = Math.max(58, Math.min(W - 58, n.x + n.vx));
+          n.y = Math.max(40, Math.min(H - 52, n.y + n.vy));
+        }
+
+        // Render SVG positions
+        edgeEls.forEach(({ el, link }) => {
+          el.setAttribute('x1', link.source.x.toFixed(1));
+          el.setAttribute('y1', link.source.y.toFixed(1));
+          el.setAttribute('x2', link.target.x.toFixed(1));
+          el.setAttribute('y2', link.target.y.toFixed(1));
+        });
+
+        nodeEls.forEach(({ g, node }) => {
+          g.setAttribute('transform', `translate(${node.x.toFixed(1)}, ${node.y.toFixed(1)})`);
+        });
+
+        if (ticks < 240 || draggingNode) {
+          rafId = window.requestAnimationFrame(step);
+        } else {
+          // Keep light animation ready when dragging resumes
+          rafId = window.requestAnimationFrame(step);
+        }
+      }
+
+      rafId = window.requestAnimationFrame(step);
+
+      stopSim = () => {
+        window.cancelAnimationFrame(rafId);
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+      };
+    }
+
+    if (!window.__ankaPaperGraphBound) {
+      window.__ankaPaperGraphBound = true;
+      document.addEventListener('astro:page-load', initPaperGraph);
+      document.addEventListener('astro:before-swap', () => {
+        if (stopSim) {
+          stopSim();
+          stopSim = null;
+        }
+      });
+    }
+    initPaperGraph();
+  })();
+</script>

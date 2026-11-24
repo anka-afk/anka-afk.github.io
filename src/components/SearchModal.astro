@@ -1,0 +1,369 @@
+---
+import { SITE } from '../site.config';
+// Built-in Cmd/Ctrl+K and '/' Search + '>' Command Palette powered by /search-index.json
+---
+
+<div
+  id="search-modal"
+  data-email={SITE.email}
+  class="fixed inset-0 z-50 hidden items-start justify-center bg-black/45 px-4 pt-[12vh] backdrop-blur-xs"
+  role="dialog"
+  aria-modal="true"
+  aria-label="站内搜索与命令面板"
+>
+  <div
+    class="w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl"
+  >
+    <div class="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3.5">
+      <svg
+        class="h-4 w-4 shrink-0 text-[var(--accent)]"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.3-4.3"></path>
+      </svg>
+      <input
+        id="search-input"
+        type="text"
+        placeholder="搜索论文、随笔、项目，或输入 > 进入命令模式..."
+        autocomplete="off"
+        class="w-full bg-transparent text-sm text-[var(--text)] placeholder-[var(--text-muted)] outline-none"
+      />
+      <kbd
+        class="rounded bg-[var(--surface-soft)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--accent)]"
+      >
+        ESC
+      </kbd>
+    </div>
+
+    <div id="search-results" class="max-h-[56vh] overflow-y-auto p-2">
+      <p class="px-3 py-8 text-center text-xs text-[var(--text-muted)]">
+        输入关键词搜索，或输入 <code class="text-[var(--accent)]">&gt;</code> 解锁快捷命令（random / dark / llms / 404）
+      </p>
+    </div>
+
+    <div class="flex items-center justify-between border-t border-[var(--border)] bg-[var(--bg)]/60 px-4 py-2 font-mono text-[11px] text-[var(--text-muted)]">
+      <span><code class="text-[var(--accent)]">/</code> 搜索 · <code class="text-[var(--accent)]">&gt;</code> 命令 · <code class="text-[var(--accent)]">↑↓</code> 选择</span>
+      <span class="hidden sm:inline">文章页：<code class="text-[var(--accent)]">f</code> 公式 · <code class="text-[var(--accent)]">z</code> 沉浸</span>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    let indexCache = null;
+    let activeIdx = -1;
+    let currentActions = [];
+
+    async function loadIndex() {
+      if (indexCache) return indexCache;
+      try {
+        const res = await fetch('/search-index.json');
+        indexCache = await res.json();
+      } catch {
+        indexCache = [];
+      }
+      return indexCache;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function navigateTo(url, external) {
+      closeModal();
+      if (external) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        window.location.href = url;
+      }
+    }
+
+    function setTheme(mode) {
+      const next =
+        mode === 'toggle'
+          ? document.documentElement.classList.contains('dark')
+            ? 'light'
+            : 'dark'
+          : mode;
+      document.documentElement.classList.toggle('dark', next === 'dark');
+      localStorage.setItem('anka-theme', next);
+      window.dispatchEvent(new CustomEvent('anka-theme-change', { detail: { theme: next } }));
+    }
+
+    function buildCommands(data, email) {
+      const papers = (data || []).filter((i) => i.type === 'paper');
+      return [
+        {
+          id: 'cmd-random',
+          title: '> random · 随机阅读一篇《推断智能》',
+          summary: '从手稿库里随机抽一篇论文精读空降过去',
+          badge: 'CMD',
+          keywords: 'random 随机 论文 lucky',
+          run: () => {
+            if (!papers.length) return navigateTo('/papers', false);
+            const pick = papers[Math.floor(Math.random() * papers.length)];
+            navigateTo(pick.url, false);
+          },
+        },
+        {
+          id: 'cmd-theme',
+          title: '> theme · 切换深浅色主题',
+          summary: '在浅紫亮色与暗紫深色之间切换',
+          badge: 'CMD',
+          keywords: 'theme dark light 暗色 亮色 主题',
+          run: () => {
+            setTheme('toggle');
+            closeModal();
+          },
+        },
+        {
+          id: 'cmd-llms',
+          title: '> llms · 查看 /llms.txt',
+          summary: '面向 LLM 与访问 Agent 的纯文本站点索引与彩蛋',
+          badge: 'CMD',
+          keywords: 'llms txt agent 彩蛋',
+          run: () => navigateTo('/llms.txt', false),
+        },
+        {
+          id: 'cmd-email',
+          title: `> email · 复制邮箱 (${email})`,
+          summary: '一键复制联系邮箱到剪贴板',
+          badge: 'CMD',
+          keywords: 'email mail contact 邮箱 联系',
+          run: async () => {
+            try {
+              await navigator.clipboard.writeText(email);
+            } catch {}
+            closeModal();
+          },
+        },
+        {
+          id: 'cmd-404',
+          title: '> 404 · 玩梯度下降地形',
+          summary: '前往 404 页面体验二维非凸损失曲面 SGD / Momentum 小玩具',
+          badge: 'FUN',
+          keywords: '404 gd sgd momentum 梯度下降 玩具 loss',
+          run: () => navigateTo('/404', false),
+        },
+        {
+          id: 'cmd-rss',
+          title: '> rss · 打开 RSS 订阅源',
+          summary: '查看 /rss.xml 订阅《推断智能》与随笔更新',
+          badge: 'CMD',
+          keywords: 'rss feed xml 订阅',
+          run: () => navigateTo('/rss.xml', false),
+        },
+      ];
+    }
+
+    function updateActiveRow() {
+      const resultsEl = document.getElementById('search-results');
+      if (!resultsEl) return;
+      const rows = Array.from(resultsEl.querySelectorAll('[data-palette-idx]'));
+      rows.forEach((row, i) => {
+        row.classList.toggle('bg-[var(--surface-soft)]/80', i === activeIdx);
+      });
+      if (activeIdx >= 0 && rows[activeIdx]) {
+        rows[activeIdx].scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function renderPalette(entries, emptyMsg) {
+      const resultsEl = document.getElementById('search-results');
+      if (!resultsEl) return;
+      currentActions = entries;
+      activeIdx = entries.length ? 0 : -1;
+
+      if (!entries.length) {
+        resultsEl.innerHTML = `<p class="px-3 py-8 text-center text-xs text-[var(--text-muted)]">${emptyMsg}</p>`;
+        return;
+      }
+
+      resultsEl.innerHTML = entries
+        .map(
+          (item, i) => `
+          <button
+            type="button"
+            data-palette-idx="${i}"
+            class="flex w-full cursor-pointer flex-col gap-1 rounded-xl px-3.5 py-2.5 text-left transition-colors hover:bg-[var(--surface-soft)]/70"
+          >
+            <div class="flex w-full items-center justify-between gap-2">
+              <span class="truncate text-sm font-semibold text-[var(--text)]">${escapeHtml(item.title)}</span>
+              <span class="shrink-0 rounded-full bg-[var(--surface-soft)] px-2 py-0.5 font-mono text-[10px] font-medium text-[var(--accent)]">
+                ${escapeHtml(item.badge)}
+              </span>
+            </div>
+            <p class="line-clamp-2 text-xs text-[var(--text-muted)]">${escapeHtml(item.summary)}</p>
+          </button>
+        `
+        )
+        .join('');
+
+      resultsEl.querySelectorAll('[data-palette-idx]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-palette-idx') || '-1', 10);
+          if (currentActions[idx]) currentActions[idx].run();
+        });
+      });
+
+      updateActiveRow();
+    }
+
+    async function handleQuery(rawQuery) {
+      const modal = document.getElementById('search-modal');
+      const email = modal?.dataset.email || 'anka@mail.ustc.edu.cn';
+      const data = await loadIndex();
+      const q = rawQuery.trim();
+
+      if (!q) {
+        currentActions = [];
+        activeIdx = -1;
+        renderPalette(
+          [],
+          '输入关键词搜索，或输入 <code class="text-[var(--accent)]">&gt;</code> 解锁快捷命令（random / dark / llms / 404）'
+        );
+        return;
+      }
+
+      const commands = buildCommands(data, email);
+
+      // Command palette mode when prefixed with '>'
+      if (q.startsWith('>')) {
+        const sub = q.slice(1).trim().toLowerCase();
+        const filtered = !sub
+          ? commands
+          : commands.filter((c) => `${c.title} ${c.keywords}`.toLowerCase().includes(sub));
+        renderPalette(filtered, '没有匹配的快捷命令');
+        return;
+      }
+
+      const lower = q.toLowerCase();
+      const tokens = lower.split(/\s+/).filter(Boolean);
+      const typeLabel = { paper: '推断智能', blog: '随笔', project: '项目' };
+
+      const matchedItems = data
+        .filter((item) => {
+          const hay = `${item.title} ${item.summary} ${(item.tags || []).join(' ')} ${item.excerpt || ''}`.toLowerCase();
+          return tokens.every((t) => hay.includes(t));
+        })
+        .slice(0, 10)
+        .map((item) => ({
+          title: item.title,
+          summary: item.summary,
+          badge: typeLabel[item.type] || item.type,
+          run: () => navigateTo(item.url, Boolean(item.external)),
+        }));
+
+      const matchedCmds = commands.filter((c) =>
+        tokens.every((t) => `${c.title} ${c.keywords}`.toLowerCase().includes(t))
+      );
+
+      renderPalette([...matchedItems, ...matchedCmds].slice(0, 12), '没有找到匹配结果');
+    }
+
+    async function openModal(prefill) {
+      const modal = document.getElementById('search-modal');
+      const input = document.getElementById('search-input');
+      if (!modal || !input) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      await loadIndex();
+      requestAnimationFrame(() => {
+        input.value = prefill || '';
+        input.focus();
+        handleQuery(input.value);
+      });
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('search-modal');
+      const input = document.getElementById('search-input');
+      if (!modal || !input) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      input.value = '';
+      currentActions = [];
+      activeIdx = -1;
+    }
+
+    function isEditableTarget(el) {
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    }
+
+    function bindSearchDom() {
+      const modal = document.getElementById('search-modal');
+      const input = document.getElementById('search-input');
+      const trigger = document.getElementById('search-trigger');
+
+      if (trigger && trigger.dataset.bound !== '1') {
+        trigger.dataset.bound = '1';
+        trigger.addEventListener('click', () => openModal(''));
+      }
+
+      if (modal && modal.dataset.bound !== '1') {
+        modal.dataset.bound = '1';
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeModal();
+        });
+      }
+
+      if (input && input.dataset.bound !== '1') {
+        input.dataset.bound = '1';
+        input.addEventListener('input', (e) => handleQuery(e.target.value));
+        input.addEventListener('keydown', (e) => {
+          if (!currentActions.length) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIdx = (activeIdx + 1) % currentActions.length;
+            updateActiveRow();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIdx = (activeIdx - 1 + currentActions.length) % currentActions.length;
+            updateActiveRow();
+          } else if (e.key === 'Enter' && activeIdx >= 0 && currentActions[activeIdx]) {
+            e.preventDefault();
+            currentActions[activeIdx].run();
+          }
+        });
+      }
+    }
+
+    if (!window.__ankaSearchBound) {
+      window.__ankaSearchBound = true;
+      document.addEventListener('astro:page-load', bindSearchDom);
+      window.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('search-modal');
+        if (!modal) return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          if (modal.classList.contains('hidden')) openModal('');
+          else closeModal();
+        } else if (
+          e.key === '/' &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          !isEditableTarget(document.activeElement) &&
+          modal.classList.contains('hidden')
+        ) {
+          e.preventDefault();
+          openModal('');
+        } else if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+          closeModal();
+        }
+      });
+    }
+
+    bindSearchDom();
+  })();
+</script>

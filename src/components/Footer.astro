@@ -1,0 +1,45 @@
+---
+import { SITE } from '../site.config';
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer border-t border-[var(--border)] bg-[var(--surface)]/50">
+  <div
+    class="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-4 py-8 text-xs text-[var(--text-muted)] sm:flex-row sm:px-6"
+  >
+    <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+      <span>© {year} {SITE.author}</span>
+      <span>·</span>
+      <span>Built with Astro &amp; Tailwind</span>
+      <span>·</span>
+      <a
+        href={SITE.social.inferringRepo}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="transition-colors hover:text-[var(--accent)]"
+      >
+        《推断智能》 CC BY 4.0
+      </a>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <a
+        href={SITE.social.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="transition-colors hover:text-[var(--accent)]"
+      >
+        GitHub
+      </a>
+      <a
+        href={SITE.social.bilibili}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="transition-colors hover:text-[var(--accent)]"
+      >
+        Bilibili
+      </a>
+      <a href="/rss.xml" class="transition-colors hover:text-[var(--accent)]">RSS</a>
+    </div>
+  </div>
+</footer>

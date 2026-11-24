@@ -1,0 +1,148 @@
+---
+import 'katex/dist/katex.min.css';
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import SearchModal from '../components/SearchModal.astro';
+import { SITE } from '../site.config';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  article?: boolean;
+}
+
+const {
+  title,
+  description = SITE.description,
+  image,
+  article = false,
+} = Astro.props;
+
+const pageTitle = title ? `${title} · ${SITE.title}` : `${SITE.title} · ${SITE.tagline}`;
+const canonicalURL = new URL(Astro.url.pathname, SITE.url);
+const ogImage = image ? new URL(image, SITE.url).toString() : SITE.avatar;
+---
+
+<!doctype html>
+<html lang="zh-CN" class="antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonicalURL} />
+    <link rel="alternate" type="application/rss+xml" title={`${SITE.title} RSS`} href="/rss.xml" />
+
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content={SITE.author} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={article ? 'article' : 'website'} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <ClientRouter />
+
+    <!-- Default to light theme unless user explicitly selected dark; persist across View Transitions -->
+    <script is:inline>
+      (() => {
+        function applyStoredTheme() {
+          const stored = localStorage.getItem('anka-theme');
+          const theme = stored || 'light';
+          document.documentElement.classList.toggle('dark', theme === 'dark');
+          document.documentElement.classList.remove('zen-mode');
+        }
+        applyStoredTheme();
+        if (!window.__ankaThemeInit) {
+          window.__ankaThemeInit = true;
+          document.addEventListener('astro:after-swap', applyStoredTheme);
+        }
+      })();
+    </script>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <Navbar />
+    <main class="mx-auto w-full max-w-5xl flex-1 px-4 pt-8 pb-20 sm:px-6">
+      <slot />
+    </main>
+    <Footer />
+    <SearchModal />
+
+    <!-- Delegated cursor spotlight + DevTools console Easter egg -->
+    <script is:inline>
+      (() => {
+        if (!window.__ankaSpotlightInit) {
+          window.__ankaSpotlightInit = true;
+          document.addEventListener(
+            'pointermove',
+            (e) => {
+              const card = e.target instanceof Element ? e.target.closest('.bento-card-hover') : null;
+              if (!card) return;
+              const rect = card.getBoundingClientRect();
+              card.style.setProperty('--mx', `${(e.clientX - rect.left).toFixed(1)}px`);
+              card.style.setProperty('--my', `${(e.clientY - rect.top).toFixed(1)}px`);
+            },
+            { passive: true }
+          );
+        }
+
+        if (!window.__ankaConsoleInit) {
+          window.__ankaConsoleInit = true;
+          const quotes = [
+            'loss 没降，先别急着改模型架构，查查学习率和数据清洗。',
+            '如果你觉得公式推得很顺，大概率是漏了一个归一化常数 Z(x)。',
+            'KL 散度约束：探索可以，但别跑得离参考策略太远。',
+            '今天显存没炸、梯度没 NaN，那就是值得庆祝的一天。',
+            '提示：首页连续点头像 5 下，或者按 / 后输入 > 试试命令模式。',
+          ];
+
+          console.log(
+            '%c anka.org %c 欢迎打开 F12 · 这里只有手推公式、/llms.txt 和认真维护的代码。输入 anka() 试试。',
+            'background:#38294E;color:#D8BAFF;padding:3px 8px;border-radius:6px;font-weight:700;font-family:monospace;',
+            'color:#63418E;font-family:monospace;'
+          );
+
+          window.anka = (cmd) => {
+            if (cmd === '404') {
+              window.location.href = '/404';
+              return '正在带你掉进局部极小值…';
+            }
+            if (cmd === 'llms') {
+              window.location.href = '/llms.txt';
+              return '正在打开 /llms.txt…';
+            }
+            if (cmd === 'temp') {
+              window.dispatchEvent(new CustomEvent('anka-temperature-toggle'));
+              return '已切换 Attention 画布采样温度';
+            }
+            const pick = quotes[Math.floor(Math.random() * quotes.length)];
+            console.log(
+              '%c∑ anka()%c ' + pick + '\n%c可用参数：anka("temp") | anka("llms") | anka("404")',
+              'color:#63418E;font-weight:700;font-family:monospace;',
+              'color:inherit;',
+              'color:#888;font-family:monospace;'
+            );
+            return pick;
+          };
+        }
+      })();
+    </script>
+  </body>
+</html>

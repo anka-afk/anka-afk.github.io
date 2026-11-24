@@ -1,0 +1,217 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { EDUCATION, EXPERIENCE, SITE, SKILLS } from '../site.config';
+---
+
+<BaseLayout title="关于" description={`关于 ${SITE.author}：${SITE.tagline}`}>
+  <div class="grid grid-cols-1 gap-10 md:grid-cols-12">
+    <!-- Main Profile -->
+    <section class="md:col-span-8">
+      <div class="flex items-center gap-4">
+        <img
+          src={SITE.avatar}
+          alt={SITE.author}
+          width="68"
+          height="68"
+          class="h-17 w-17 rounded-2xl border border-[var(--border-strong)] object-cover"
+        />
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight text-[var(--text)]">{SITE.author}</h1>
+          <p class="mt-0.5 font-mono text-xs text-[var(--text-muted)]">
+            @{SITE.handle} · {SITE.location}
+          </p>
+        </div>
+      </div>
+
+      <div class="prose-anka mt-7">
+        <p>
+          你好，我是 <strong>anka</strong>。本科毕业于华南理工大学数学学院（信息与计算科学），目前在中国科学技术大学人工智能与数据科学学院攻读智能科学与技术硕士学位。
+        </p>
+        <p>
+          我的主要研究兴趣集中在 <strong>LLM Post-Training / RL 与 Agent 系统</strong>。平时习惯在 Obsidian 里整理论文推导与笔记，并将系统化的算法解读沉淀到{' '}
+          <a href="/papers">《推断智能》（Inferring-Intelligence）</a> 专栏里，比起照搬结论，我更想把“公式为什么偏偏被设计成这样”的直觉讲清楚，同时提供完整严密的证明。
+        </p>
+        <p>
+          工程方面，平时参与多平台 LLM 机器人框架{' '}
+          <a href="https://github.com/AstrBotDevs/AstrBot" target="_blank" rel="noopener noreferrer">
+            AstrBot
+          </a>{' '}
+          的开源维护与社区 PR 评审，也维护着{' '}
+          <a href="https://github.com/anka-afk/astrbot_sowing_discord" target="_blank" rel="noopener noreferrer">
+            astrbot_sowing_discord（沉淀中）
+          </a>{' '}
+          与{' '}
+          <a href="https://github.com/anka-afk/astrbot_plugin_meme_manager" target="_blank" rel="noopener noreferrer">
+            astrbot_plugin_meme_manager
+          </a>{' '}
+          两个插件。
+        </p>
+      </div>
+
+      <!-- Education -->
+      <div class="mt-10 border-t border-[var(--border)] pt-7">
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+            Education
+          </h2>
+          <a
+            href={SITE.social.orcid}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-mono text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
+          >
+            ORCID {SITE.social.orcidId} ↗
+          </a>
+        </div>
+
+        <div class="mt-4 divide-y divide-[var(--border)]">
+          {
+            EDUCATION.map((edu) => (
+              <div class="py-4 first:pt-1">
+                <div class="flex flex-col justify-between gap-1 sm:flex-row sm:items-baseline">
+                  <div class="text-sm font-bold text-[var(--text)]">{edu.school}</div>
+                  <span
+                    class:list={[
+                      'shrink-0 font-mono text-xs',
+                      edu.current ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]',
+                    ]}
+                  >
+                    {edu.period}
+                  </span>
+                </div>
+                <div class="mt-1 text-xs font-medium text-[var(--text-secondary)]">{edu.degree}</div>
+                <div class="mt-0.5 text-xs text-[var(--text-muted)]">
+                  {edu.department} · {edu.location}
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- Experience -->
+      <div class="mt-9 border-t border-[var(--border)] pt-7">
+        <h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+          Experience
+        </h2>
+        <div class="mt-4 divide-y divide-[var(--border)]">
+          {
+            EXPERIENCE.map((exp) => (
+              <div class="py-4 first:pt-1">
+                <div class="flex flex-col justify-between gap-1 sm:flex-row sm:items-baseline">
+                  <div class="text-sm font-bold text-[var(--text)]">
+                    {'url' in exp && exp.url ? (
+                      <a
+                        href={exp.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="transition-colors hover:text-[var(--accent)]"
+                      >
+                        {exp.org} ↗
+                      </a>
+                    ) : (
+                      exp.org
+                    )}
+                  </div>
+                  <span class="shrink-0 font-mono text-xs text-[var(--text-muted)]">
+                    {exp.period}
+                  </span>
+                </div>
+                <div class="mt-1 text-xs font-medium text-[var(--text-secondary)]">
+                  {exp.role} · {exp.location}
+                </div>
+                {exp.summary && (
+                  <p class="mt-1.5 text-xs leading-relaxed text-[var(--text-muted)]">
+                    {exp.summary}
+                  </p>
+                )}
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- Side Panel -->
+    <aside class="space-y-8 border-t border-[var(--border)] pt-8 md:col-span-4 md:border-t-0 md:border-l md:pt-0 md:pl-8">
+      <div>
+        <h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+          Contact &amp; Links
+        </h2>
+        <ul class="mt-4 space-y-2.5 text-xs">
+          <li>
+            <a
+              href={`mailto:${SITE.email}`}
+              class="flex items-center justify-between py-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--accent)]"
+            >
+              <span>Email</span>
+              <span class="font-mono text-[var(--text-muted)]">{SITE.email}</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href={SITE.social.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between py-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--accent)]"
+            >
+              <span>GitHub</span>
+              <span class="font-mono text-[var(--text-muted)]">@{SITE.handle} ↗</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href={SITE.social.orcid}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between py-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--accent)]"
+            >
+              <span>ORCID</span>
+              <span class="font-mono text-[var(--text-muted)]">{SITE.social.orcidId} ↗</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href={SITE.social.bilibili}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between py-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--accent)]"
+            >
+              <span>Bilibili</span>
+              <span class="font-mono text-[var(--text-muted)]">个人空间 ↗</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href={SITE.social.inferringRepo}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between py-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--accent)]"
+            >
+              <span>Inferring-Intelligence</span>
+              <span class="font-mono text-[var(--text-muted)]">手稿仓库 ↗</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="border-t border-[var(--border)] pt-7">
+        <h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+          Tech Stack
+        </h2>
+        <div class="mt-4 space-y-4">
+          {
+            SKILLS.map((block) => (
+              <div>
+                <div class="mb-1.5 text-xs font-semibold text-[var(--text-muted)]">{block.group}</div>
+                <p class="font-mono text-xs leading-relaxed text-[var(--text-secondary)]">
+                  {block.items.join(' · ')}
+                </p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </aside>
+  </div>
+</BaseLayout>

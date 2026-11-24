@@ -1,0 +1,146 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
+import ReadingEnhancements from '../../components/ReadingEnhancements.astro';
+import Giscus from '../../components/Giscus.astro';
+import { SITE } from '../../site.config';
+import { estimateReadingMinutes, formatDate } from '../../utils/format';
+import { buildCleanMarkdown } from '../../utils/markdown';
+
+export async function getStaticPaths() {
+  const posts = (await getCollection('blog'))
+    .filter((p) => !p.data.draft)
+    .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+
+  return posts.map((post, idx) => ({
+    params: { id: post.id },
+    props: {
+      post,
+      prevPost: idx < posts.length - 1 ? posts[idx + 1] : null,
+      nextPost: idx > 0 ? posts[idx - 1] : null,
+    },
+  }));
+}
+
+const { post, prevPost, nextPost } = Astro.props;
+const { Content, headings } = await render(post);
+const readingMinutes = estimateReadingMinutes(post.body || '');
+
+const cleanMarkdown = buildCleanMarkdown(post.body || '', {
+  title: post.data.title,
+  url: `${SITE.url}/blog/${post.id}`,
+  summary: post.data.description,
+  isPaper: false,
+});
+const safeMarkdownJson = JSON.stringify(cleanMarkdown).replace(/<\/script/gi, '<\\/script');
+---
+
+<BaseLayout
+  title={post.data.title}
+  description={post.data.description}
+  image={post.data.coverImage}
+  article={true}
+>
+  <nav class="zen-hide mb-5 flex items-center gap-2 font-mono text-xs text-[var(--text-muted)]">
+    <a href="/" class="hover:text-[var(--accent)]">首页</a>
+    <span>/</span>
+    <a href="/blog" class="hover:text-[var(--accent)]">随笔</a>
+  </nav>
+
+  <header class="mb-9 border-b border-[var(--border)] pb-7">
+    <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-[var(--text-muted)]">
+      <div class="flex flex-wrap items-center gap-2">
+        <time>{formatDate(post.data.publishedAt)}</time>
+        <span>·</span>
+        <span>约 {readingMinutes} 分钟</span>
+        {
+          post.data.updatedAt && (
+            <>
+              <span>·</span>
+              <span>更新于 {formatDate(post.data.updatedAt)}</span>
+            </>
+          )
+        }
+      </div>
+
+      <div class="flex items-center gap-4">
+        <button
+          type="button"
+          data-copy-markdown
+          class="cursor-pointer transition-colors hover:text-[var(--accent)]"
+        >
+          复制 Markdown
+        </button>
+        <button
+          type="button"
+          data-zen-toggle
+          class="zen-hide cursor-pointer transition-colors hover:text-[var(--accent)]"
+          title="沉浸阅读模式（快捷键 z）"
+        >
+          沉浸阅读
+        </button>
+      </div>
+    </div>
+
+    <h1 class="mt-3 max-w-4xl text-2xl font-extrabold leading-tight tracking-tight text-[var(--text)] sm:text-3xl">
+      {post.data.title}
+    </h1>
+
+    <p class="mt-3 max-w-3xl text-sm leading-relaxed text-[var(--text-secondary)]">
+      {post.data.description}
+    </p>
+
+    {
+      post.data.tags.length > 0 && (
+        <div class="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+          {post.data.tags.map((tag) => (
+            <span>#{tag}</span>
+          ))}
+        </div>
+      )
+    }
+  </header>
+
+  <div class="zen-reading-grid grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_210px]">
+    <div class="zen-reading-col mx-auto w-full max-w-3xl min-w-0 lg:mx-0 lg:max-w-none">
+      <TableOfContents headings={headings} mode="mobile" />
+
+      <article class="prose-anka">
+        <Content />
+      </article>
+
+      <nav class="mt-12 grid grid-cols-1 gap-4 border-t border-[var(--border)] pt-6 sm:grid-cols-2" aria-label="上下篇导航">
+        {
+          prevPost ? (
+            <a href={`/blog/${prevPost.id}`} data-nav-prev class="group flex flex-col">
+              <span class="font-mono text-[11px] text-[var(--text-muted)]">← 更早一篇</span>
+              <span class="mt-1 line-clamp-1 text-sm font-semibold text-[var(--text)] transition-colors group-hover:text-[var(--accent)]">
+                {prevPost.data.title}
+              </span>
+            </a>
+          ) : (
+            <div />
+          )
+        }
+        {
+          nextPost && (
+            <a href={`/blog/${nextPost.id}`} data-nav-next class="group flex flex-col sm:text-right">
+              <span class="font-mono text-[11px] text-[var(--text-muted)]">更新一篇 →</span>
+              <span class="mt-1 line-clamp-1 text-sm font-semibold text-[var(--text)] transition-colors group-hover:text-[var(--accent)]">
+                {nextPost.data.title}
+              </span>
+            </a>
+          )
+        }
+      </nav>
+
+      <Giscus />
+    </div>
+
+    <TableOfContents headings={headings} mode="desktop" />
+  </div>
+
+  <script id="anka-raw-markdown" type="application/json" set:html={safeMarkdownJson} />
+  <ReadingEnhancements />
+</BaseLayout>

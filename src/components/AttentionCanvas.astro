@@ -1,0 +1,206 @@
+---
+// Subtle, interactive Attention-inspired sparse node mesh behind the homepage hero.
+// Nodes drift smoothly and cursor acts like a Query token weighting nearby Key nodes.
+---
+
+<canvas
+  id="attention-canvas"
+  aria-hidden="true"
+  class="pointer-events-none absolute inset-0 z-0 block h-full w-full"
+></canvas>
+
+<script is:inline>
+  (() => {
+    let stopFn = null;
+
+    function initAttentionCanvas() {
+      const canvas = document.getElementById('attention-canvas');
+      if (!(canvas instanceof HTMLCanvasElement)) return;
+      if (canvas.dataset.running === '1') return;
+
+      if (stopFn) {
+        stopFn();
+        stopFn = null;
+      }
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      canvas.dataset.running = '1';
+
+      let width = 0;
+      let height = 0;
+      let dpr = Math.min(window.devicePixelRatio || 1, 2);
+      let nodes = [];
+      let rafId = 0;
+      let highTemp = false;
+      const pointer = { x: -9999, y: -9999, active: false };
+
+      function onTempToggle() {
+        highTemp = !highTemp;
+        window.dispatchEvent(new CustomEvent('anka-temperature-changed', { detail: { high: highTemp } }));
+      }
+
+      function seedNodes() {
+        const count = width < 640 ? 24 : 42;
+        nodes = Array.from({ length: count }, () => {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 0.25 + Math.random() * 0.3;
+          return {
+            x: 16 + Math.random() * Math.max(10, width - 32),
+            y: 16 + Math.random() * Math.max(10, height - 32),
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            r: 1.5 + Math.random() * 1.4,
+          };
+        });
+      }
+
+      function resize() {
+        const parent = canvas.parentElement;
+        const rect = parent ? parent.getBoundingClientRect() : canvas.getBoundingClientRect();
+        width = Math.max(300, Math.floor(rect.width));
+        height = Math.max(220, Math.floor(rect.height));
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (!nodes.length) seedNodes();
+      }
+
+      function onPointerMove(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        if (x >= -30 && x <= rect.width + 30 && y >= -30 && y <= rect.height + 30) {
+          pointer.x = x;
+          pointer.y = y;
+          pointer.active = true;
+        } else {
+          pointer.active = false;
+        }
+      }
+
+      function onPointerLeave() {
+        pointer.active = false;
+      }
+
+      function drawFrame() {
+        if (document.hidden) return;
+        ctx.clearRect(0, 0, width, height);
+        const isDark = document.documentElement.classList.contains('dark');
+        const rgb = highTemp
+          ? (isDark ? '244, 114, 182' : '147, 51, 234')
+          : (isDark ? '216, 186, 255' : '99, 65, 142');
+        const speedMul = highTemp ? 3.2 : 1;
+
+        for (const n of nodes) {
+          n.x += n.vx * speedMul;
+          n.y += n.vy * speedMul;
+          if (n.x < 10 || n.x > width - 10) n.vx *= -1;
+          if (n.y < 10 || n.y > height - 10) n.vy *= -1;
+          n.x = Math.max(6, Math.min(width - 6, n.x));
+          n.y = Math.max(6, Math.min(height - 6, n.y));
+        }
+
+        // Ambient sparse neighbor links
+        const maxDist = highTemp ? 195 : 155;
+        ctx.lineWidth = highTemp ? 1.1 : 0.9;
+        for (let i = 0; i < nodes.length; i++) {
+          const a = nodes[i];
+          for (let j = i + 1; j < nodes.length; j++) {
+            const b = nodes[j];
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < maxDist * maxDist) {
+              const dist = Math.sqrt(d2);
+              const alpha = (1 - dist / maxDist) * (highTemp ? 0.3 : (isDark ? 0.17 : 0.14));
+              ctx.strokeStyle = `rgba(${rgb}, ${alpha.toFixed(3)})`;
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Cursor Query -> top-K Key Attention links
+        const attnMap = new Map();
+        if (pointer.active) {
+          const scored = nodes
+            .map((n, idx) => ({ idx, n, dist: Math.hypot(n.x - pointer.x, n.y - pointer.y) }))
+            .filter((item) => item.dist < 240)
+            .sort((a, b) => a.dist - b.dist)
+            .slice(0, 6);
+
+          if (scored.length) {
+            const exps = scored.map((s) => Math.exp(-s.dist / 100));
+            const sumExp = exps.reduce((acc, v) => acc + v, 0) || 1;
+            scored.forEach((s, k) => {
+              const weight = exps[k] / sumExp;
+              attnMap.set(s.idx, weight);
+              const alpha = Math.min(0.62, 0.2 + weight * 0.72);
+              ctx.lineWidth = 0.95 + weight * 1.4;
+              ctx.strokeStyle = `rgba(${rgb}, ${alpha.toFixed(3)})`;
+              ctx.beginPath();
+              ctx.moveTo(pointer.x, pointer.y);
+              ctx.lineTo(s.n.x, s.n.y);
+              ctx.stroke();
+            });
+
+            ctx.fillStyle = `rgba(${rgb}, ${isDark ? 0.5 : 0.4})`;
+            ctx.beginPath();
+            ctx.arc(pointer.x, pointer.y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Draw nodes
+        for (let i = 0; i < nodes.length; i++) {
+          const n = nodes[i];
+          const w = attnMap.get(i) || 0;
+          const alpha = (isDark ? 0.3 : 0.25) + w * 0.65;
+          const radius = n.r + w * 2.2;
+          ctx.fillStyle = `rgba(${rgb}, ${alpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function loop() {
+        drawFrame();
+        rafId = window.requestAnimationFrame(loop);
+      }
+
+      resize();
+      window.addEventListener('resize', resize, { passive: true });
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('anka-temperature-toggle', onTempToggle);
+      document.addEventListener('pointerleave', onPointerLeave, { passive: true });
+      rafId = window.requestAnimationFrame(loop);
+
+      stopFn = () => {
+        window.cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', resize);
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('anka-temperature-toggle', onTempToggle);
+        document.removeEventListener('pointerleave', onPointerLeave);
+        delete canvas.dataset.running;
+      };
+    }
+
+    if (!window.__ankaAttentionBound) {
+      window.__ankaAttentionBound = true;
+      document.addEventListener('astro:page-load', initAttentionCanvas);
+      document.addEventListener('astro:before-swap', () => {
+        if (stopFn) {
+          stopFn();
+          stopFn = null;
+        }
+      });
+    }
+    initAttentionCanvas();
+  })();
+</script>

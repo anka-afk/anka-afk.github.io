@@ -1,0 +1,783 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #faf8fd;
+  --surface: #ffffff;
+  --surface-soft: #eee6f8;
+  --surface-hover: #e5d8f5;
+  --border: #e6dcf3;
+  --border-strong: #d3c0eb;
+  --text: #1d1626;
+  --text-secondary: #4e435f;
+  --text-muted: #7a6e8c;
+  --accent: #63418e;
+  --accent-hover: #4e3173;
+  --accent-soft: rgba(99, 65, 142, 0.1);
+  --glow-1: rgba(139, 92, 246, 0.11);
+  --glow-2: rgba(99, 65, 142, 0.08);
+}
+
+.dark {
+  --bg: #0f0b15;
+  --surface: #181223;
+  --surface-soft: #38294e;
+  --surface-hover: #453360;
+  --border: #2c203e;
+  --border-strong: #453361;
+  --text: #f3eefa;
+  --text-secondary: #cfc4df;
+  --text-muted: #9688ad;
+  --accent: #d8baff;
+  --accent-hover: #e9d7ff;
+  --accent-soft: rgba(216, 186, 255, 0.14);
+  --glow-1: rgba(167, 139, 250, 0.12);
+  --glow-2: rgba(99, 65, 142, 0.18);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family:
+      "Plus Jakarta Sans",
+      -apple-system,
+      BlinkMacSystemFont,
+      "PingFang SC",
+      "Hiragino Sans GB",
+      "Microsoft YaHei",
+      "Noto Sans SC",
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--bg);
+    color: var(--text);
+    background-image:
+      radial-gradient(ellipse 80% 45% at 50% -10%, var(--glow-1), transparent 70%),
+      radial-gradient(ellipse 50% 35% at 90% 10%, var(--glow-2), transparent 65%);
+    background-attachment: fixed;
+  }
+
+  code,
+  pre,
+  .font-mono {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  ::selection {
+    background-color: var(--surface-soft);
+    color: var(--accent);
+  }
+}
+
+/* Bento Card Surface + Subtle Cursor Spotlight */
+.bento-card {
+  position: relative;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.bento-card-hover {
+  overflow: hidden;
+}
+
+.bento-card-hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    320px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(99, 65, 142, 0.09),
+    transparent 65%
+  );
+  transition: opacity 0.25s ease;
+}
+
+.dark .bento-card-hover::before {
+  background: radial-gradient(
+    320px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(216, 186, 255, 0.11),
+    transparent 65%
+  );
+}
+
+.bento-card-hover:hover::before {
+  opacity: 1;
+}
+
+.bento-card-hover:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 10px 30px -14px rgba(99, 65, 142, 0.22);
+}
+
+.dark .bento-card-hover:hover {
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.6);
+}
+
+/* Zen Reading Mode (toggle via 'z' on article pages) */
+html.zen-mode header.site-navbar,
+html.zen-mode footer.site-footer,
+html.zen-mode .zen-hide {
+  display: none !important;
+}
+
+html.zen-mode main {
+  max-width: 52rem;
+  padding-top: 3rem;
+}
+
+html.zen-mode .zen-reading-grid {
+  display: block !important;
+}
+
+html.zen-mode .zen-reading-col {
+  max-width: 72ch !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+html.zen-mode .prose-anka {
+  font-size: 1.07rem;
+  line-height: 1.92;
+}
+
+.zen-exit-pill {
+  position: fixed;
+  top: 1.15rem;
+  right: 1.25rem;
+  z-index: 65;
+  display: none;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-strong);
+  background-color: var(--surface);
+  color: var(--text-secondary);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -8px rgba(99, 65, 142, 0.28);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.zen-exit-pill:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+html.zen-mode .zen-exit-pill {
+  display: inline-flex;
+}
+
+/* Signature Purple Pill */
+.pill-purple {
+  background-color: var(--surface-soft);
+  color: var(--accent);
+  border: 1px solid transparent;
+}
+
+.pill-purple:hover {
+  background-color: var(--surface-hover);
+}
+
+/* Shiki dual theme support */
+.astro-code,
+.astro-code span {
+  background-color: transparent !important;
+}
+
+.dark .astro-code span {
+  color: var(--shiki-dark) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+/* ==========================================
+   Editorial / Academic Prose Styling
+   ========================================== */
+.prose-anka {
+  color: var(--text);
+  font-size: 1.02rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.prose-anka > *:first-child {
+  margin-top: 0;
+}
+
+.prose-anka h1,
+.prose-anka h2,
+.prose-anka h3,
+.prose-anka h4 {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  scroll-margin-top: 5.5rem;
+}
+
+.prose-anka h2 {
+  font-size: 1.5rem;
+  line-height: 1.35;
+  margin-top: 2.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.prose-anka h3 {
+  font-size: 1.22rem;
+  line-height: 1.4;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-anka h4 {
+  font-size: 1.05rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--accent);
+}
+
+.prose-anka p {
+  margin-top: 1.05rem;
+  margin-bottom: 1.05rem;
+  color: var(--text-secondary);
+}
+
+.prose-anka strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.prose-anka a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.prose-anka a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: var(--accent);
+}
+
+.prose-anka ul,
+.prose-anka ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.prose-anka ul {
+  list-style-type: disc;
+}
+
+.prose-anka ol {
+  list-style-type: decimal;
+}
+
+.prose-anka li {
+  margin: 0.42rem 0;
+}
+
+.prose-anka li::marker {
+  color: var(--accent);
+}
+
+.prose-anka blockquote {
+  margin: 1.4rem 0;
+  padding: 0.85rem 1.2rem;
+  border-left: 3px solid var(--accent);
+  background-color: var(--accent-soft);
+  border-radius: 0 0.75rem 0.75rem 0;
+  color: var(--text-secondary);
+}
+
+.prose-anka blockquote p {
+  margin: 0.35rem 0;
+}
+
+.prose-anka hr {
+  margin: 2.25rem 0;
+  border: 0;
+  border-top: 1px dashed var(--border-strong);
+}
+
+/* Inline code */
+.prose-anka :not(pre) > code {
+  font-size: 0.88em;
+  padding: 0.16em 0.42em;
+  border-radius: 0.4rem;
+  background-color: var(--surface-soft);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Fenced code blocks */
+.prose-anka pre {
+  position: relative;
+  margin: 1.4rem 0;
+  padding: 1.15rem 1.25rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface) !important;
+  overflow-x: auto;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.dark .prose-anka pre {
+  background-color: #140f1e !important;
+}
+
+.prose-anka pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-weight: 400;
+}
+
+/* Tables */
+.prose-anka table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.92rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  display: block;
+  overflow-x: auto;
+}
+
+.prose-anka thead {
+  background-color: var(--surface-soft);
+}
+
+.prose-anka th {
+  text-align: left;
+  padding: 0.7rem 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.prose-anka td {
+  padding: 0.65rem 0.95rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.prose-anka tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Images (Paper figures) */
+.prose-anka img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.75rem auto;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: #ffffff;
+  padding: 0.35rem;
+  cursor: zoom-in;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.dark .prose-anka img {
+  background-color: #ebe6f2;
+  border-color: var(--border-strong);
+  filter: brightness(0.88) contrast(1.03);
+}
+
+.dark .prose-anka img:hover {
+  filter: brightness(0.95) contrast(1.02);
+}
+
+.prose-anka img:hover {
+  box-shadow: 0 10px 24px -12px rgba(99, 65, 142, 0.25);
+}
+
+/* ==========================================
+   KaTeX & Click-to-Copy LaTeX Enhancements
+   ========================================== */
+.prose-anka .katex-display {
+  position: relative;
+  margin: 1.45rem 0;
+  padding: 1.05rem 1.25rem;
+  border-radius: 0.9rem;
+  border: 1px solid transparent;
+  background-color: var(--accent-soft);
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.prose-anka .katex-display:hover {
+  border-color: var(--border-strong);
+}
+
+.prose-anka .katex-display::after {
+  content: "Copy LaTeX";
+  position: absolute;
+  top: 0.45rem;
+  right: 0.6rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.48rem;
+  border-radius: 0.4rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.prose-anka .katex-display:hover::after,
+.prose-anka .katex-display.is-copied::after {
+  opacity: 1;
+}
+
+.prose-anka .katex-display.is-copied::after {
+  content: "Copied ✓";
+  background-color: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* Inline KaTeX clickable */
+.prose-anka .katex:not(.katex-display > .katex) {
+  cursor: pointer;
+  padding: 0.08em 0.24em;
+  margin: 0 0.03em;
+  border-radius: 0.35rem;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.prose-anka .katex:not(.katex-display > .katex):hover {
+  background-color: var(--surface-soft);
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+.prose-anka .katex.is-copied {
+  background-color: var(--surface-soft);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+
+/* ==========================================
+   Obsidian / GitHub Callouts
+   ========================================== */
+.prose-anka .callout {
+  margin: 1.4rem 0;
+  padding: 0.95rem 1.2rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent);
+  background-color: var(--accent-soft);
+}
+
+.prose-anka .callout-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.prose-anka .callout-body {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.prose-anka .callout-body > p:first-child {
+  margin-top: 0;
+}
+
+.prose-anka .callout-body > p:last-child {
+  margin-bottom: 0;
+}
+
+.prose-anka .callout-warning,
+.prose-anka .callout-caution {
+  border-left-color: #d97706;
+  background-color: rgba(217, 119, 6, 0.08);
+}
+
+.prose-anka .callout-warning .callout-title,
+.prose-anka .callout-caution .callout-title {
+  color: #b45309;
+}
+
+.dark .prose-anka .callout-warning .callout-title,
+.dark .prose-anka .callout-caution .callout-title {
+  color: #fbbf24;
+}
+
+.prose-anka .callout-tip {
+  border-left-color: #0d9488;
+  background-color: rgba(13, 148, 136, 0.08);
+}
+
+.prose-anka .callout-tip .callout-title {
+  color: #0f766e;
+}
+
+.dark .prose-anka .callout-tip .callout-title {
+  color: #5eead4;
+}
+
+/* Copy code button inside pre */
+.code-copy-btn {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.6rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.52rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.prose-anka pre:hover .code-copy-btn,
+.code-copy-btn:focus {
+  opacity: 1;
+}
+
+.code-copy-btn:hover {
+  color: var(--accent);
+  border-color: var(--border-strong);
+}
+
+/* Formula copy toast */
+.anka-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(1rem);
+  background-color: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 12px 32px -8px rgba(99, 65, 142, 0.32);
+  padding: 0.55rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  z-index: 80;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.anka-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* 2px Subtle Reading Progress Bar */
+.reading-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  z-index: 60;
+  pointer-events: none;
+  transition: width 60ms linear;
+}
+
+/* Heading hover anchor button */
+.prose-anka h2,
+.prose-anka h3 {
+  position: relative;
+}
+
+.heading-anchor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.45rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8em;
+  font-weight: 500;
+  color: var(--text-muted);
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0 0.2rem;
+  vertical-align: baseline;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.prose-anka h2:hover .heading-anchor-btn,
+.prose-anka h3:hover .heading-anchor-btn,
+.heading-anchor-btn:focus {
+  opacity: 1;
+}
+
+.heading-anchor-btn:hover {
+  color: var(--accent);
+}
+
+/* Gentle pulse highlight when jumping from Formula Sheet to an equation */
+@keyframes eqPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 65, 142, 0.45);
+    border-color: var(--accent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(99, 65, 142, 0);
+    border-color: var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 65, 142, 0);
+  }
+}
+
+.prose-anka .katex-display.eq-highlight {
+  animation: eqPulse 1.2s ease-out;
+}
+
+/* ==========================================
+   Academic Lecture-Handout Print / PDF Mode
+   ========================================== */
+@page {
+  margin: 16mm 15mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #111111 !important;
+    font-size: 11pt !important;
+  }
+
+  header.site-navbar,
+  footer.site-footer,
+  aside,
+  .zen-hide,
+  .zen-exit-pill,
+  .reading-progress-bar,
+  .anka-toast,
+  .heading-anchor-btn,
+  .code-copy-btn,
+  #search-modal,
+  #formula-sheet-modal,
+  #anka-lightbox,
+  [data-copy-markdown],
+  [data-copy-text],
+  [data-formula-sheet-trigger],
+  [data-zen-toggle],
+  nav[aria-label="上下篇导航"],
+  section[aria-label="评论区"] {
+    display: none !important;
+  }
+
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .zen-reading-grid {
+    display: block !important;
+  }
+
+  .zen-reading-col {
+    max-width: 100% !important;
+  }
+
+  .prose-anka {
+    color: #111111 !important;
+    font-size: 10.5pt !important;
+    line-height: 1.72 !important;
+  }
+
+  .prose-anka p,
+  .prose-anka li,
+  .prose-anka td {
+    color: #222222 !important;
+  }
+
+  .prose-anka a {
+    color: #3f2466 !important;
+    text-decoration: none !important;
+  }
+
+  .prose-anka h1,
+  .prose-anka h2,
+  .prose-anka h3,
+  .prose-anka h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+    color: #111111 !important;
+  }
+
+  .prose-anka .katex-display,
+  .prose-anka pre,
+  .prose-anka img,
+  .prose-anka table,
+  .prose-anka blockquote,
+  .prose-anka .callout {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .prose-anka .katex-display {
+    background: #f6f3fb !important;
+    border: 1px solid #e2d8f0 !important;
+    padding: 0.7rem 0.9rem !important;
+  }
+
+  .prose-anka .katex-display::after {
+    display: none !important;
+  }
+
+  .prose-anka img {
+    filter: none !important;
+    background: #ffffff !important;
+    max-height: 18cm !important;
+    box-shadow: none !important;
+  }
+}

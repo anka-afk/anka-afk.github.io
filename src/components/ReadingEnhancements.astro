@@ -1,0 +1,615 @@
+---
+// Enhances article pages with:
+// 1. 2px reading progress bar
+// 2. Click-to-copy LaTeX on every KaTeX formula (inline & block) + smart cross-selection copy
+// 3. Formula Sheet modal (all display formulas grouped by section, direct click copy or jump)
+// 4. Heading '#' anchor link copy on hover
+// 5. Copy full Markdown / Attribution / BibTeX handlers
+// 6. Code block copy button + Image lightbox
+// 7. Zen Reading Mode ('z' or button) + Keyboard shortcuts ('f' formula sheet, '[' prev, ']' next)
+---
+
+<!-- 2px Reading Progress Bar -->
+<div id="reading-progress-bar" class="reading-progress-bar" aria-hidden="true"></div>
+
+<!-- Floating Exit Zen Mode Pill -->
+<button id="zen-exit-pill" type="button" class="zen-exit-pill" aria-label="退出沉浸阅读">
+  <span>退出沉浸</span>
+  <span class="opacity-65">Z / ESC</span>
+</button>
+
+<!-- Toast feedback -->
+<div id="anka-toast" class="anka-toast" role="status" aria-live="polite">
+  <span class="inline-block h-2 w-2 rounded-full bg-[var(--accent)]"></span>
+  <span id="anka-toast-text">已复制 LaTeX</span>
+</div>
+
+<!-- Formula Sheet Drawer / Modal -->
+<div
+  id="formula-sheet-modal"
+  class="fixed inset-0 z-50 hidden items-start justify-center bg-black/50 px-4 pt-[7vh] pb-8 backdrop-blur-xs"
+  role="dialog"
+  aria-modal="true"
+  aria-label="全篇公式速览"
+>
+  <div
+    class="flex max-h-[84vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl"
+  >
+    <div class="flex items-center justify-between border-b border-[var(--border)] px-5 py-3.5">
+      <div class="flex items-baseline gap-2.5">
+        <h2 class="text-sm font-bold text-[var(--text)]">全篇公式速览</h2>
+        <span id="formula-sheet-subtitle" class="font-mono text-xs text-[var(--text-muted)]"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="hidden font-mono text-[11px] text-[var(--text-muted)] sm:inline">
+          按 <code class="text-[var(--accent)]">f</code> 开关 · <code class="text-[var(--accent)]">ESC</code> 关闭
+        </span>
+        <button
+          id="formula-sheet-close"
+          type="button"
+          aria-label="关闭公式速览"
+          class="cursor-pointer rounded-lg border border-[var(--border)] px-2 py-1 font-mono text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text)]"
+        >
+          关闭
+        </button>
+      </div>
+    </div>
+
+    <div id="formula-sheet-body" class="flex-1 space-y-5 overflow-y-auto px-5 py-5"></div>
+  </div>
+</div>
+
+<!-- Image Lightbox Modal -->
+<div
+  id="anka-lightbox"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4 backdrop-blur-xs"
+  role="dialog"
+  aria-modal="true"
+  aria-label="放大查看图片"
+>
+  <figure class="flex max-h-[92vh] max-w-[94vw] flex-col items-center gap-3">
+    <img
+      id="anka-lightbox-img"
+      alt=""
+      class="max-h-[82vh] max-w-full rounded-xl border border-white/15 bg-white object-contain p-2 shadow-2xl"
+    />
+    <figcaption id="anka-lightbox-caption" class="text-center text-xs text-white/80"></figcaption>
+  </figure>
+</div>
+
+<script is:inline>
+  (() => {
+    let cleanupPage = null;
+
+    function initReadingEnhancements() {
+      const prose = document.querySelector('.prose-anka');
+      if (!prose) return;
+      if (prose.dataset.enhanced === '1') return;
+
+      if (cleanupPage) {
+        cleanupPage();
+        cleanupPage = null;
+      }
+
+      prose.dataset.enhanced = '1';
+
+      const toast = document.getElementById('anka-toast');
+      const toastText = document.getElementById('anka-toast-text');
+      let toastTimer = null;
+
+      function showToast(msg) {
+        if (!toast || !toastText) return;
+        toastText.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 1900);
+      }
+
+      async function copyText(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          return ok;
+        }
+      }
+
+      function isEditableTarget(el) {
+        if (!el) return false;
+        const tag = el.tagName;
+        return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+      }
+
+      // 1. 2px Reading Progress Bar
+      const progressBar = document.getElementById('reading-progress-bar');
+      let scrollHandler = null;
+      if (progressBar) {
+        let ticking = false;
+        const updateProgress = () => {
+          const doc = document.documentElement;
+          const scrollable = doc.scrollHeight - window.innerHeight;
+          const pct = scrollable > 0 ? Math.min(100, Math.max(0, (window.scrollY / scrollable) * 100)) : 0;
+          progressBar.style.width = `${pct.toFixed(2)}%`;
+          ticking = false;
+        };
+        scrollHandler = () => {
+          if (!ticking) {
+            window.requestAnimationFrame(updateProgress);
+            ticking = true;
+          }
+        };
+        window.addEventListener('scroll', scrollHandler, { passive: true });
+        updateProgress();
+      }
+
+      // 2. Zen Mode toggle
+      function toggleZen(forceState) {
+        const next =
+          typeof forceState === 'boolean'
+            ? forceState
+            : !document.documentElement.classList.contains('zen-mode');
+        document.documentElement.classList.toggle('zen-mode', next);
+        showToast(next ? '已进入沉浸阅读（按 Z 或 ESC 退出）' : '已退出沉浸阅读');
+      }
+
+      document.querySelectorAll('[data-zen-toggle]').forEach((btn) => {
+        btn.addEventListener('click', () => toggleZen());
+      });
+      document.getElementById('zen-exit-pill')?.addEventListener('click', () => toggleZen(false));
+
+      // 3. Click-to-copy LaTeX + collect display equations for Formula Sheet
+      const formulaRecords = [];
+      const displayMathNodes = Array.from(prose.querySelectorAll('.katex-display'));
+
+      function cleanHeadingText(h) {
+        if (!h) return '正文';
+        const clone = h.cloneNode(true);
+        clone.querySelectorAll('.katex-mathml, .heading-anchor-btn').forEach((n) => n.remove());
+        return (clone.textContent || '').trim() || '正文';
+      }
+
+      const allFlowNodes = Array.from(prose.querySelectorAll('h2, h3, .katex-display'));
+      let currentSection = '引言';
+      const sectionByDisplayNode = new Map();
+      allFlowNodes.forEach((node) => {
+        if (node.tagName === 'H2' || node.tagName === 'H3') {
+          currentSection = cleanHeadingText(node);
+        } else {
+          sectionByDisplayNode.set(node, currentSection);
+        }
+      });
+
+      displayMathNodes.forEach((node, idx) => {
+        const annotation = node.querySelector('annotation[encoding="application/x-tex"]');
+        if (!annotation || !annotation.textContent) return;
+        const rawLatex = annotation.textContent.trim();
+        const eqId = `eq-${idx + 1}`;
+        node.id = eqId;
+        node.style.scrollMarginTop = '6rem';
+        node.setAttribute('title', '点击复制块级 LaTeX（Shift+点击复制纯源码）');
+
+        formulaRecords.push({
+          index: idx + 1,
+          id: eqId,
+          section: sectionByDisplayNode.get(node) || '正文',
+          rawLatex,
+          sourceNode: node,
+        });
+
+        node.addEventListener('click', async (e) => {
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) return;
+          e.stopPropagation();
+          const payload = e.shiftKey ? rawLatex : `$$\n${rawLatex}\n$$`;
+          const ok = await copyText(payload);
+          if (ok) {
+            node.classList.add('is-copied');
+            setTimeout(() => node.classList.remove('is-copied'), 1200);
+            showToast(e.shiftKey ? '已复制纯 LaTeX 源码' : '已复制块级公式 ($$...$$)');
+          }
+        });
+      });
+
+      prose.querySelectorAll('.katex').forEach((node) => {
+        if (node.closest('.katex-display')) return;
+        const annotation = node.querySelector('annotation[encoding="application/x-tex"]');
+        if (!annotation || !annotation.textContent) return;
+        const rawLatex = annotation.textContent.trim();
+        node.setAttribute('title', '点击复制行内 LaTeX（Shift+点击复制纯源码）');
+        node.addEventListener('click', async (e) => {
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) return;
+          e.stopPropagation();
+          const payload = e.shiftKey ? rawLatex : `$${rawLatex}$`;
+          const ok = await copyText(payload);
+          if (ok) {
+            node.classList.add('is-copied');
+            setTimeout(() => node.classList.remove('is-copied'), 1000);
+            showToast(e.shiftKey ? '已复制纯 LaTeX 源码' : '已复制行内公式 ($...$)');
+          }
+        });
+      });
+
+      // 4. Smart cross-selection copy (text + formulas)
+      function findOuterMathNode(node) {
+        const el = node && node.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+        if (!el) return null;
+        return el.closest('.katex-display') || el.closest('.katex');
+      }
+
+      function serializeCleanNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+        if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+        const tag = node.tagName;
+        if (
+          node.classList.contains('heading-anchor-btn') ||
+          node.classList.contains('code-copy-btn')
+        ) {
+          return '';
+        }
+
+        if (tag === 'BR') return '\n';
+
+        if (node.classList.contains('katex-display')) {
+          const tex = node.querySelector('annotation[encoding="application/x-tex"]')?.textContent?.trim();
+          return tex ? `\n\n$$\n${tex}\n$$\n\n` : '';
+        }
+
+        if (node.classList.contains('katex')) {
+          const tex = node.querySelector('annotation[encoding="application/x-tex"]')?.textContent?.trim();
+          return tex ? `$${tex}$` : '';
+        }
+
+        if (tag === 'PRE') {
+          const code = node.querySelector('code');
+          const raw = (code ? code.textContent : node.textContent || '').replace(/\n+$/, '');
+          return `\n\n\`\`\`\n${raw}\n\`\`\`\n\n`;
+        }
+
+        const childrenText = Array.from(node.childNodes).map(serializeCleanNode).join('');
+
+        if (tag === 'LI') return `\n- ${childrenText.trim()}`;
+
+        if (tag === 'TR') {
+          const cells = Array.from(node.children).map((c) => serializeCleanNode(c).trim());
+          return `\n| ${cells.join(' | ')} |`;
+        }
+
+        if (tag === 'BLOCKQUOTE') {
+          const quoted = childrenText
+            .trim()
+            .split('\n')
+            .map((l) => (l.trim() ? `> ${l}` : '>'))
+            .join('\n');
+          return `\n\n${quoted}\n\n`;
+        }
+
+        if (/^(P|DIV|H1|H2|H3|H4|H5|H6|UL|OL|TABLE|ASIDE|SECTION|HR)$/.test(tag)) {
+          if (tag === 'HR') return '\n\n---\n\n';
+          return `\n\n${childrenText.trim()}\n\n`;
+        }
+
+        return childrenText;
+      }
+
+      prose.addEventListener('copy', (e) => {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+        if (!prose.contains(range.commonAncestorContainer)) return;
+
+        const expanded = range.cloneRange();
+        const startMath = findOuterMathNode(expanded.startContainer);
+        if (startMath && prose.contains(startMath)) expanded.setStartBefore(startMath);
+        const endMath = findOuterMathNode(expanded.endContainer);
+        if (endMath && prose.contains(endMath)) expanded.setEndAfter(endMath);
+
+        const fragment = expanded.cloneContents();
+        const hasMath = Boolean(fragment.querySelector('.katex, .katex-display'));
+        const hasChrome = Boolean(fragment.querySelector('.heading-anchor-btn, .code-copy-btn'));
+        if (!hasMath && !hasChrome) return;
+
+        const rawOutput = Array.from(fragment.childNodes).map(serializeCleanNode).join('');
+        const cleaned = rawOutput
+          .replace(/[ \t]+\n/g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+
+        if (!cleaned || !e.clipboardData) return;
+
+        e.preventDefault();
+        e.clipboardData.setData('text/plain', cleaned);
+        if (hasMath) showToast('已复制选中内容（含 LaTeX 公式）');
+      });
+
+      // 5. Formula Sheet Drawer
+      const sheetModal = document.getElementById('formula-sheet-modal');
+      const sheetBody = document.getElementById('formula-sheet-body');
+      const sheetSubtitle = document.getElementById('formula-sheet-subtitle');
+      const sheetClose = document.getElementById('formula-sheet-close');
+      const sheetTriggers = Array.from(document.querySelectorAll('[data-formula-sheet-trigger]'));
+      let sheetRendered = false;
+
+      function closeSheet() {
+        if (!sheetModal) return;
+        sheetModal.classList.add('hidden');
+        sheetModal.classList.remove('flex');
+      }
+
+      function renderSheetOnce() {
+        if (sheetRendered || !sheetBody) return;
+        sheetRendered = true;
+
+        if (sheetSubtitle) {
+          sheetSubtitle.textContent = `共 ${formulaRecords.length} 个核心块级公式`;
+        }
+
+        const groups = [];
+        for (const rec of formulaRecords) {
+          const last = groups[groups.length - 1];
+          if (last && last.section === rec.section) last.items.push(rec);
+          else groups.push({ section: rec.section, items: [rec] });
+        }
+
+        const frag = document.createDocumentFragment();
+        groups.forEach((group) => {
+          const secEl = document.createElement('section');
+          const headingEl = document.createElement('h3');
+          headingEl.className = 'mb-2.5 font-mono text-xs font-semibold text-[var(--accent)]';
+          headingEl.textContent = group.section;
+          secEl.appendChild(headingEl);
+
+          const listEl = document.createElement('div');
+          listEl.className = 'space-y-2.5';
+
+          group.items.forEach((rec) => {
+            const row = document.createElement('div');
+            row.className =
+              'group rounded-xl border border-[var(--border)] bg-[var(--bg)]/70 p-3.5 transition-colors hover:border-[var(--border-strong)]';
+
+            const topBar = document.createElement('div');
+            topBar.className = 'mb-2 flex items-center justify-between gap-2 font-mono text-[11px]';
+
+            const idxLabel = document.createElement('span');
+            idxLabel.className = 'text-[var(--text-muted)]';
+            idxLabel.textContent = `(${rec.index})`;
+
+            const actions = document.createElement('div');
+            actions.className = 'flex items-center gap-3';
+
+            const jumpBtn = document.createElement('button');
+            jumpBtn.type = 'button';
+            jumpBtn.className =
+              'cursor-pointer text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]';
+            jumpBtn.textContent = '定位 ↵';
+            jumpBtn.addEventListener('click', () => {
+              closeSheet();
+              rec.sourceNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              rec.sourceNode.classList.remove('eq-highlight');
+              void rec.sourceNode.offsetWidth;
+              rec.sourceNode.classList.add('eq-highlight');
+            });
+
+            const doCopyEquation = async (e) => {
+              const payload = e.shiftKey ? rec.rawLatex : `$$\n${rec.rawLatex}\n$$`;
+              const ok = await copyText(payload);
+              if (ok) {
+                copyBtn.textContent = '已复制 ✓';
+                row.classList.add('border-[var(--accent)]');
+                setTimeout(() => {
+                  copyBtn.textContent = '复制 LaTeX';
+                  row.classList.remove('border-[var(--accent)]');
+                }, 1100);
+                showToast(e.shiftKey ? '已复制纯 LaTeX 源码' : '已复制块级公式 ($$...$$)');
+              }
+            };
+
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'cursor-pointer font-semibold text-[var(--accent)] hover:underline';
+            copyBtn.textContent = '复制 LaTeX';
+            copyBtn.addEventListener('click', doCopyEquation);
+
+            actions.appendChild(jumpBtn);
+            actions.appendChild(copyBtn);
+            topBar.appendChild(idxLabel);
+            topBar.appendChild(actions);
+
+            const eqBox = document.createElement('div');
+            eqBox.className =
+              'cursor-pointer overflow-x-auto rounded-lg px-2 py-2 text-center transition-colors hover:bg-[var(--surface-soft)]/50';
+            eqBox.setAttribute('title', '点击复制块级 LaTeX（Shift+点击复制纯源码）');
+            eqBox.addEventListener('click', doCopyEquation);
+            const katexClone = rec.sourceNode.querySelector('.katex')?.cloneNode(true);
+            if (katexClone) eqBox.appendChild(katexClone);
+
+            row.appendChild(topBar);
+            row.appendChild(eqBox);
+            listEl.appendChild(row);
+          });
+
+          secEl.appendChild(listEl);
+          frag.appendChild(secEl);
+        });
+
+        sheetBody.appendChild(frag);
+      }
+
+      function openSheet() {
+        if (!sheetModal || !formulaRecords.length) return;
+        renderSheetOnce();
+        sheetModal.classList.remove('hidden');
+        sheetModal.classList.add('flex');
+      }
+
+      if (formulaRecords.length > 0) {
+        sheetTriggers.forEach((btn) => {
+          btn.classList.remove('hidden');
+          btn.classList.add('inline-flex');
+          const badge = btn.querySelector('[data-formula-count]');
+          if (badge) badge.textContent = String(formulaRecords.length);
+          btn.addEventListener('click', openSheet);
+        });
+      }
+
+      sheetClose?.addEventListener('click', closeSheet);
+      sheetModal?.addEventListener('click', (e) => {
+        if (e.target === sheetModal) closeSheet();
+      });
+
+      // 6. Heading '#' anchor link copy
+      prose.querySelectorAll('h2[id], h3[id]').forEach((heading) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'heading-anchor-btn';
+        btn.setAttribute('aria-label', '复制本节链接');
+        btn.setAttribute('title', '复制本节锚点链接');
+        btn.textContent = '#';
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const url = `${window.location.origin}${window.location.pathname}#${heading.id}`;
+          window.history.replaceState(null, '', `#${heading.id}`);
+          const ok = await copyText(url);
+          if (ok) showToast('已复制小节锚点链接');
+        });
+        heading.appendChild(btn);
+      });
+
+      // 7. Copy full Markdown & custom text copy buttons
+      const rawMdScript = document.getElementById('anka-raw-markdown');
+      document.querySelectorAll('[data-copy-markdown]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!rawMdScript?.textContent) return;
+          try {
+            const md = JSON.parse(rawMdScript.textContent);
+            const ok = await copyText(md);
+            if (ok) showToast('已复制全文 Markdown（标准 LaTeX 格式）');
+          } catch {}
+        });
+      });
+
+      document.querySelectorAll('[data-copy-text]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const text = btn.getAttribute('data-copy-text') || '';
+          const msg = btn.getAttribute('data-copy-toast') || '已复制到剪贴板';
+          if (!text) return;
+          const ok = await copyText(text);
+          if (ok) showToast(msg);
+        });
+      });
+
+      // 8. Code block copy buttons
+      prose.querySelectorAll('pre').forEach((pre) => {
+        const code = pre.querySelector('code');
+        if (!code) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'code-copy-btn';
+        btn.textContent = 'Copy';
+        btn.addEventListener('click', async () => {
+          const ok = await copyText(code.textContent || '');
+          if (ok) {
+            btn.textContent = 'Copied ✓';
+            setTimeout(() => (btn.textContent = 'Copy'), 1300);
+            showToast('已复制代码');
+          }
+        });
+        pre.appendChild(btn);
+      });
+
+      // 9. Image lightbox
+      const lightbox = document.getElementById('anka-lightbox');
+      const lbImg = document.getElementById('anka-lightbox-img');
+      const lbCaption = document.getElementById('anka-lightbox-caption');
+
+      function closeLightbox() {
+        if (!lightbox) return;
+        lightbox.classList.add('hidden');
+        lightbox.classList.remove('flex');
+      }
+
+      prose.querySelectorAll('img').forEach((img) => {
+        img.addEventListener('click', () => {
+          if (!lightbox || !lbImg || !lbCaption) return;
+          lbImg.src = img.src;
+          lbImg.alt = img.alt || '';
+          lbCaption.textContent = img.alt || '';
+          lightbox.classList.remove('hidden');
+          lightbox.classList.add('flex');
+        });
+      });
+
+      lightbox?.addEventListener('click', closeLightbox);
+
+      // 10. Global keyboard shortcuts on article pages
+      const keyHandler = (e) => {
+        if (e.key === 'Escape') {
+          const wasOpen =
+            (lightbox && !lightbox.classList.contains('hidden')) ||
+            (sheetModal && !sheetModal.classList.contains('hidden'));
+          closeLightbox();
+          closeSheet();
+          if (!wasOpen && document.documentElement.classList.contains('zen-mode')) {
+            toggleZen(false);
+          }
+          return;
+        }
+
+        const searchModal = document.getElementById('search-modal');
+        const modalOpen =
+          (searchModal && !searchModal.classList.contains('hidden')) ||
+          (lightbox && !lightbox.classList.contains('hidden'));
+
+        if (e.ctrlKey || e.metaKey || e.altKey || isEditableTarget(document.activeElement) || modalOpen) {
+          return;
+        }
+
+        const key = e.key.toLowerCase();
+        if (key === 'f' && formulaRecords.length > 0) {
+          e.preventDefault();
+          if (sheetModal?.classList.contains('hidden')) openSheet();
+          else closeSheet();
+        } else if (key === 'z') {
+          e.preventDefault();
+          toggleZen();
+        } else if (e.key === '[') {
+          const prev = document.querySelector('[data-nav-prev]');
+          if (prev instanceof HTMLAnchorElement) prev.click();
+        } else if (e.key === ']') {
+          const next = document.querySelector('[data-nav-next]');
+          if (next instanceof HTMLAnchorElement) next.click();
+        }
+      };
+
+      window.addEventListener('keydown', keyHandler);
+
+      cleanupPage = () => {
+        if (scrollHandler) window.removeEventListener('scroll', scrollHandler);
+        window.removeEventListener('keydown', keyHandler);
+        document.documentElement.classList.remove('zen-mode');
+      };
+    }
+
+    if (!window.__ankaReadingBound) {
+      window.__ankaReadingBound = true;
+      document.addEventListener('astro:page-load', initReadingEnhancements);
+      document.addEventListener('astro:before-swap', () => {
+        if (cleanupPage) {
+          cleanupPage();
+          cleanupPage = null;
+        }
+      });
+    }
+    initReadingEnhancements();
+  })();
+</script>

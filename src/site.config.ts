@@ -50,9 +50,9 @@ export const SITE = {
   giscus: {
     enabled: true,
     repo: 'anka-afk/anka-afk.github.io',
-    repoId: '',
+    repoId: 'R_kgDOLvxhBg',
     category: 'Announcements',
-    categoryId: '',
+    categoryId: 'DIC_kwDOLvxhBs4DL3ME',
     mapping: 'pathname',
     lang: 'zh-CN',
   },

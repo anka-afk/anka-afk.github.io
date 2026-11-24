@@ -9,6 +9,7 @@ dist/
 .cache/
 src/content/papers/
 public/papers/
+public/sync-meta.json
 
 # Logs & OS files
 npm-debug.log*

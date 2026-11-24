@@ -369,7 +369,31 @@ function main() {
     console.log(`[sync] #${number} ${slug} -> "${parsed.displayTitle}" (${topics.join(', ')})`);
   }
 
-  console.log(`[sync] Done! Synced ${syncedCount} manuscripts from Inferring-Intelligence.`);
+  // Write sync metadata so scheduled GitHub Actions can skip builds when nothing changed
+  let latestCommit = '';
+  try {
+    latestCommit = runGit(['rev-parse', 'HEAD'], CACHE_DIR);
+  } catch {
+    latestCommit = '';
+  }
+  const syncMetaPath = path.join(ROOT_DIR, 'public', 'sync-meta.json');
+  fs.writeFileSync(
+    syncMetaPath,
+    JSON.stringify(
+      {
+        repo: 'anka-afk/Inferring-Intelligence',
+        branch: REPO_BRANCH,
+        commit: latestCommit,
+        manuscripts: syncedCount,
+        syncedAt: new Date().toISOString(),
+      },
+      null,
+      2
+    ) + '\n',
+    'utf8'
+  );
+
+  console.log(`[sync] Done! Synced ${syncedCount} manuscripts from Inferring-Intelligence (${latestCommit.slice(0, 7) || 'unknown'}).`);
 }
 
 main();

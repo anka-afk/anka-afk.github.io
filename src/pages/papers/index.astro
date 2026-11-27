@@ -107,6 +107,12 @@ const showTopicFilter = papers.length >= 10 && allTopics.length > 1;
             )}
             <span>·</span>
             <span>约 {paper.data.readingMinutes} 分钟</span>
+            {paper.data.formulaCount > 0 && (
+              <>
+                <span>·</span>
+                <span>{paper.data.formulaCount} 块公式</span>
+              </>
+            )}
             <span>·</span>
             <time>{formatDate(paper.data.updatedAt)}</time>
           </div>

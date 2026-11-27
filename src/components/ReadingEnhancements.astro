@@ -24,6 +24,34 @@
   <span id="anka-toast-text">已复制 LaTeX</span>
 </div>
 
+<!-- Resume Reading Pill -->
+<div id="resume-reading-pill" class="resume-pill" role="status" aria-live="polite">
+  <button
+    id="resume-reading-go"
+    type="button"
+    class="cursor-pointer truncate text-left transition-colors hover:text-[var(--accent)]"
+  >
+    <span id="resume-reading-label">上次读到这里</span>
+    <span class="ml-1.5 font-mono font-semibold text-[var(--accent)]">继续阅读 ↵</span>
+  </button>
+  <button
+    id="resume-reading-dismiss"
+    type="button"
+    aria-label="关闭续读提示"
+    class="cursor-pointer px-1 font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+  >
+    ×
+  </button>
+</div>
+
+<!-- Cross-Paper Concept Hover Preview Popover -->
+<div id="paper-ref-popover" class="paper-ref-popover" role="tooltip">
+  <div id="paper-ref-meta" class="font-mono text-[11px] font-semibold text-[var(--accent)]"></div>
+  <div id="paper-ref-title" class="mt-1 text-xs font-bold leading-snug text-[var(--text)]"></div>
+  <p id="paper-ref-summary" class="mt-1.5 line-clamp-3 text-xs leading-relaxed text-[var(--text-secondary)]"></p>
+  <div class="mt-2 font-mono text-[11px] text-[var(--accent)]">点击跳转精读 →</div>
+</div>
+
 <!-- Formula Sheet Drawer / Modal -->
 <div
   id="formula-sheet-modal"
@@ -551,7 +579,211 @@
 
       lightbox?.addEventListener('click', closeLightbox);
 
-      // 10. Global keyboard shortcuts on article pages
+      // 10. Resume Reading memory (localStorage) for long articles
+      const storageKey = `anka-read-pos:${window.location.pathname}`;
+      const resumePill = document.getElementById('resume-reading-pill');
+      const resumeGo = document.getElementById('resume-reading-go');
+      const resumeLabel = document.getElementById('resume-reading-label');
+      const resumeDismiss = document.getElementById('resume-reading-dismiss');
+      let resumeHideTimer = null;
+      let savePosTimer = null;
+
+      function hideResumePill() {
+        resumePill?.classList.remove('show');
+        clearTimeout(resumeHideTimer);
+      }
+
+      function currentNearestHeading() {
+        const heads = Array.from(prose.querySelectorAll('h2, h3'));
+        let active = '';
+        for (const h of heads) {
+          if (h.getBoundingClientRect().top <= 140) {
+            active = cleanHeadingText(h);
+          } else {
+            break;
+          }
+        }
+        return active;
+      }
+
+      function saveReadPosition() {
+        const doc = document.documentElement;
+        const scrollable = doc.scrollHeight - window.innerHeight;
+        if (scrollable < window.innerHeight * 1.1) return;
+        const y = Math.round(window.scrollY);
+        const pct = scrollable > 0 ? y / scrollable : 0;
+        try {
+          if (pct < 0.12 || pct > 0.92) {
+            localStorage.removeItem(storageKey);
+          } else {
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify({ y, pct, heading: currentNearestHeading(), ts: Date.now() })
+            );
+          }
+        } catch {}
+      }
+
+      const savePosScrollHandler = () => {
+        if (resumePill?.classList.contains('show') && window.scrollY > 180) {
+          hideResumePill();
+        }
+        clearTimeout(savePosTimer);
+        savePosTimer = setTimeout(saveReadPosition, 450);
+      };
+      window.addEventListener('scroll', savePosScrollHandler, { passive: true });
+
+      try {
+        const savedRaw = localStorage.getItem(storageKey);
+        if (savedRaw && window.scrollY < 100 && !window.location.hash) {
+          const saved = JSON.parse(savedRaw);
+          const ageMs = Date.now() - (saved.ts || 0);
+          if (
+            saved &&
+            typeof saved.y === 'number' &&
+            saved.y > 380 &&
+            saved.pct >= 0.18 &&
+            saved.pct <= 0.92 &&
+            ageMs < 30 * 24 * 60 * 60 * 1000 &&
+            resumePill &&
+            resumeGo &&
+            resumeLabel
+          ) {
+            const pctLabel = `${Math.round(saved.pct * 100)}%`;
+            resumeLabel.textContent = saved.heading
+              ? `上次读到「${saved.heading.slice(0, 14)}」`
+              : `上次读到 ${pctLabel}`;
+            resumePill.classList.add('show');
+            resumeGo.addEventListener(
+              'click',
+              () => {
+                hideResumePill();
+                window.scrollTo({ top: saved.y, behavior: 'smooth' });
+              },
+              { once: true }
+            );
+            resumeDismiss?.addEventListener('click', hideResumePill, { once: true });
+            resumeHideTimer = setTimeout(hideResumePill, 7500);
+          }
+        }
+      } catch {}
+
+      // 11. Cross-Paper Concept Hover Preview Cards
+      const refsScript = document.getElementById('anka-paper-refs');
+      const popover = document.getElementById('paper-ref-popover');
+      const popMeta = document.getElementById('paper-ref-meta');
+      const popTitle = document.getElementById('paper-ref-title');
+      const popSummary = document.getElementById('paper-ref-summary');
+      let popHideTimer = null;
+
+      if (refsScript?.textContent && popover && popMeta && popTitle && popSummary) {
+        try {
+          const refs = JSON.parse(refsScript.textContent);
+          if (Array.isArray(refs) && refs.length > 0) {
+            const refByKw = new Map();
+            const kwList = [];
+            refs.forEach((r) => {
+              (r.keywords || []).forEach((kw) => {
+                if (!refByKw.has(kw)) {
+                  refByKw.set(kw, r);
+                  kwList.push(kw);
+                }
+              });
+            });
+
+            if (kwList.length > 0) {
+              const escaped = kwList
+                .sort((a, b) => b.length - a.length)
+                .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+              const kwRe = new RegExp(`(?<![A-Za-z0-9_])(${escaped.join('|')})(?![A-Za-z0-9_])`, 'g');
+              const linkedCounts = new Map();
+
+              const walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT, {
+                acceptNode(node) {
+                  if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                  const parent = node.parentElement;
+                  if (!parent) return NodeFilter.FILTER_REJECT;
+                  if (parent.closest('a, code, pre, h1, h2, h3, h4, .katex, .katex-display, button')) {
+                    return NodeFilter.FILTER_REJECT;
+                  }
+                  return NodeFilter.FILTER_ACCEPT;
+                },
+              });
+
+              const textNodes = [];
+              let cur;
+              while ((cur = walker.nextNode())) textNodes.push(cur);
+
+              textNodes.forEach((tNode) => {
+                const text = tNode.nodeValue || '';
+                kwRe.lastIndex = 0;
+                if (!kwRe.test(text)) return;
+                kwRe.lastIndex = 0;
+
+                const frag = document.createDocumentFragment();
+                let lastIdx = 0;
+                let replacedAny = false;
+                let m;
+
+                while ((m = kwRe.exec(text)) !== null) {
+                  const kw = m[1];
+                  const ref = refByKw.get(kw);
+                  const count = linkedCounts.get(kw) || 0;
+                  if (!ref || count >= 2) continue;
+
+                  linkedCounts.set(kw, count + 1);
+                  if (m.index > lastIdx) {
+                    frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
+                  }
+
+                  const a = document.createElement('a');
+                  a.href = ref.url;
+                  a.className = 'paper-ref-link';
+                  a.textContent = kw;
+                  a.addEventListener('pointerenter', () => {
+                    clearTimeout(popHideTimer);
+                    popMeta.textContent = `推断智能 #${ref.number}${ref.venue ? ` · ${ref.venue}` : ''}`;
+                    popTitle.textContent = ref.title;
+                    popSummary.textContent = ref.summary;
+                    const rect = a.getBoundingClientRect();
+                    const topSpace = rect.top;
+                    const popWidth = Math.min(340, window.innerWidth - 24);
+                    const left = Math.max(
+                      12,
+                      Math.min(window.innerWidth - popWidth - 12, rect.left + rect.width / 2 - popWidth / 2)
+                    );
+                    popover.style.left = `${left}px`;
+                    if (topSpace > 190) {
+                      popover.style.top = `${Math.max(12, rect.top - 10)}px`;
+                      popover.style.transform = 'translateY(-100%)';
+                    } else {
+                      popover.style.top = `${rect.bottom + 10}px`;
+                      popover.style.transform = 'translateY(0)';
+                    }
+                    popover.classList.add('show');
+                  });
+                  a.addEventListener('pointerleave', () => {
+                    popHideTimer = setTimeout(() => popover.classList.remove('show'), 140);
+                  });
+
+                  frag.appendChild(a);
+                  lastIdx = m.index + kw.length;
+                  replacedAny = true;
+                }
+
+                if (replacedAny) {
+                  if (lastIdx < text.length) {
+                    frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+                  }
+                  tNode.parentNode?.replaceChild(frag, tNode);
+                }
+              });
+            }
+          }
+        } catch {}
+      }
+
+      // 12. Global keyboard shortcuts on article pages
       const keyHandler = (e) => {
         if (e.key === 'Escape') {
           const wasOpen =
@@ -595,7 +827,12 @@
 
       cleanupPage = () => {
         if (scrollHandler) window.removeEventListener('scroll', scrollHandler);
+        window.removeEventListener('scroll', savePosScrollHandler);
         window.removeEventListener('keydown', keyHandler);
+        clearTimeout(resumeHideTimer);
+        clearTimeout(savePosTimer);
+        clearTimeout(popHideTimer);
+        popover?.classList.remove('show');
         document.documentElement.classList.remove('zen-mode');
       };
     }

@@ -1,0 +1,191 @@
+---
+// Global '?' Keyboard Shortcuts Cheat-Sheet Modal
+---
+
+<div
+  id="shortcuts-modal"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-xs"
+  role="dialog"
+  aria-modal="true"
+  aria-label="快捷键与交互速查"
+>
+  <div
+    class="w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-2xl"
+  >
+    <div class="flex items-center justify-between border-b border-[var(--border)] px-5 py-3.5">
+      <div class="flex items-center gap-2">
+        <span class="font-mono text-xs font-semibold text-[var(--accent)]">?</span>
+        <h2 class="text-sm font-bold text-[var(--text)]">快捷键与隐藏交互</h2>
+      </div>
+      <button
+        type="button"
+        id="shortcuts-close"
+        aria-label="关闭快捷键面板"
+        class="cursor-pointer rounded-md px-2 py-0.5 font-mono text-[11px] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-soft)] hover:text-[var(--accent)]"
+      >
+        ESC
+      </button>
+    </div>
+
+    <div class="max-h-[70vh] space-y-5 overflow-y-auto px-5 py-4 text-xs">
+      <!-- Global -->
+      <section>
+        <h3 class="mb-2.5 font-mono text-[11px] font-semibold tracking-wider text-[var(--accent)] uppercase">
+          全局导航
+        </h3>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">站内搜索（论文 / 随笔 / 项目）</span>
+            <span class="flex shrink-0 items-center gap-1 font-mono text-[11px]">
+              <kbd class="rounded bg-[var(--surface-soft)] px-1.5 py-0.5 text-[var(--accent)]">/</kbd>
+              <span class="text-[var(--text-muted)]">或</span>
+              <kbd class="rounded bg-[var(--surface-soft)] px-1.5 py-0.5 text-[var(--accent)]">Ctrl+K</kbd>
+            </span>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">搜索框命令模式（随机漫游 / 切主题 / llms）</span>
+            <kbd class="shrink-0 rounded bg-[var(--surface-soft)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--accent)]">&gt;</kbd>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">打开 / 关闭本速查面板</span>
+            <kbd class="shrink-0 rounded bg-[var(--surface-soft)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--accent)]">?</kbd>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reading -->
+      <section class="border-t border-[var(--border)] pt-4">
+        <h3 class="mb-2.5 font-mono text-[11px] font-semibold tracking-wider text-[var(--accent)] uppercase">
+          论文与随笔阅读
+        </h3>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">公式速览抽屉（点击直接复制 LaTeX 或跳转）</span>
+            <kbd class="shrink-0 rounded bg-[var(--surface-soft)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--accent)]">f</kbd>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">沉浸阅读模式（隐藏导航栏与侧边目录）</span>
+            <kbd class="shrink-0 rounded bg-[var(--surface-soft)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--accent)]">z</kbd>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">跳转上一篇 / 下一篇</span>
+            <span class="flex shrink-0 items-center gap-1 font-mono text-[11px]">
+              <kbd class="rounded bg-[var(--surface-soft)] px-1.5 py-0.5 text-[var(--accent)]">[</kbd>
+              <kbd class="rounded bg-[var(--surface-soft)] px-1.5 py-0.5 text-[var(--accent)]">]</kbd>
+            </span>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">点击公式复制 <code class="text-[var(--accent)]">$...$</code> / 裸源码</span>
+            <span class="flex shrink-0 items-center gap-1 font-mono text-[11px]">
+              <kbd class="rounded bg-[var(--surface-soft)] px-1.5 py-0.5 text-[var(--accent)]">Click</kbd>
+              <span class="text-[var(--text-muted)]">/</span>
+              <kbd class="rounded bg-[var(--surface-soft)] px-1.5 py-0.5 text-[var(--accent)]">Shift+Click</kbd>
+            </span>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">划选含公式段落，直接还原纯净 Markdown</span>
+            <kbd class="shrink-0 rounded bg-[var(--surface-soft)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--accent)]">Ctrl+C</kbd>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-[var(--text-secondary)]">导出学术讲义 PDF（自动去噪并防公式截断）</span>
+            <kbd class="shrink-0 rounded bg-[var(--surface-soft)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--accent)]">Ctrl+P</kbd>
+          </div>
+        </div>
+      </section>
+
+      <!-- Easter eggs -->
+      <section class="border-t border-[var(--border)] pt-4">
+        <h3 class="mb-2.5 font-mono text-[11px] font-semibold tracking-wider text-[var(--accent)] uppercase">
+          小彩蛋
+        </h3>
+        <div class="space-y-1.5 text-[var(--text-muted)]">
+          <p>· 首页连续点击头像 <strong class="text-[var(--text-secondary)]">5 次</strong>，切换 Attention 背景采样温度</p>
+          <p>· 打开浏览器控制台输入 <code class="text-[var(--accent)]">anka()</code>，或访问 <a href="/404" class="text-[var(--accent)] underline decoration-dotted underline-offset-2">/404</a> 体验梯度下降</p>
+          <p>· 论文正文里的紫色虚线术语（如 DPO / Mamba / ETO），悬停可预览关联笔记</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    if (window.__ankaShortcutsInit) return;
+    window.__ankaShortcutsInit = true;
+
+    function getModal() {
+      return document.getElementById('shortcuts-modal');
+    }
+
+    function openShortcuts() {
+      const modal = getModal();
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeShortcuts() {
+      const modal = getModal();
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function isAnyOtherModalOpen() {
+      const ids = ['search-modal', 'formula-sheet-modal', 'anka-lightbox'];
+      return ids.some((id) => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains('hidden');
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
+
+      if (target.closest('[data-shortcuts-trigger]')) {
+        e.preventDefault();
+        openShortcuts();
+        return;
+      }
+
+      const modal = getModal();
+      if (!modal || modal.classList.contains('hidden')) return;
+
+      if (target === modal || target.closest('#shortcuts-close')) {
+        closeShortcuts();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const modal = getModal();
+      if (!modal) return;
+
+      const isOpen = !modal.classList.contains('hidden');
+      if (e.key === 'Escape' && isOpen) {
+        e.preventDefault();
+        closeShortcuts();
+        return;
+      }
+
+      const tag = document.activeElement?.tagName;
+      const inEditable =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        document.activeElement?.isContentEditable;
+      if (inEditable || e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        if (!isOpen && isAnyOtherModalOpen()) return;
+        e.preventDefault();
+        if (isOpen) closeShortcuts();
+        else openShortcuts();
+      }
+    });
+
+    document.addEventListener('astro:before-swap', () => {
+      closeShortcuts();
+    });
+  })();
+</script>

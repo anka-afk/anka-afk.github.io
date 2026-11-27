@@ -233,14 +233,33 @@ function parseManuscript(rawContent, slug, indexInfo) {
     return `${p1}${publicPath}${p3}`;
   });
 
-  // Estimate reading time (CJK characters + English words)
+  // Count equations & figures for realistic academic reading time estimation
+  const displayFenceCount = (body.match(/^```math\b/gm) || []).length;
+  const displayDollarCount = Math.floor((body.match(/\$\$/g) || []).length / 2);
+  const displayFormulaCount = displayFenceCount + displayDollarCount;
+  const inlineGithubCount = (body.match(/\$`[^`\r\n]+`\$/g) || []).length;
+  const imageCount = (body.match(/!\[[^\]]*\]\([^)]+\)/g) || []).length;
+
   const plainText = body
     .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/\$\$[\s\S]*?\$\$/g, ' ')
     .replace(/\$`[^`]+`\$/g, ' ')
     .replace(/!\[[^\]]*\]\([^)]+\)/g, ' ');
   const cjkCount = (plainText.match(/[\u4e00-\u9fff]/g) || []).length;
   const wordCount = (plainText.match(/[a-zA-Z0-9_]+/g) || []).length;
-  const readingMinutes = Math.max(1, Math.ceil((cjkCount + wordCount * 0.7) / 360));
+  const inlineDollarCount = Math.floor((plainText.match(/(?<!\\)\$/g) || []).length / 2);
+  const inlineFormulaCount = inlineGithubCount + inlineDollarCount;
+
+  // Academic derivation pace: ~220 chars/min prose + ~20s/display eq + ~2.5s/inline eq + ~15s/figure
+  const readingMinutes = Math.max(
+    3,
+    Math.ceil(
+      (cjkCount + wordCount * 0.75) / 220 +
+        displayFormulaCount * 0.32 +
+        inlineFormulaCount * 0.04 +
+        imageCount * 0.25
+    )
+  );
 
   return {
     title,
@@ -254,6 +273,7 @@ function parseManuscript(rawContent, slug, indexInfo) {
     summary: summary || `《推断智能》手稿：${title}`,
     coverImage,
     readingMinutes,
+    formulaCount: displayFormulaCount,
     body,
   };
 }
@@ -356,6 +376,7 @@ function main() {
       `courseUrl: ${yamlStr(parsed.courseUrl)}`,
       `coverImage: ${yamlStr(parsed.coverImage)}`,
       `readingMinutes: ${parsed.readingMinutes}`,
+      `formulaCount: ${parsed.formulaCount}`,
       `publishedAt: ${yamlStr(publishedAt)}`,
       `updatedAt: ${yamlStr(updatedAt)}`,
       `sourceUrl: ${yamlStr(`https://github.com/anka-afk/Inferring-Intelligence/blob/${REPO_BRANCH}/manuscripts/${slug}/README.md`)}`,

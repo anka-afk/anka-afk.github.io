@@ -18,6 +18,7 @@ const papers = defineCollection({
     courseUrl: z.string().default(''),
     coverImage: z.string().default(''),
     readingMinutes: z.number().default(5),
+    formulaCount: z.number().default(0),
     publishedAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
     sourceUrl: z.string().default(''),

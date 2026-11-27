@@ -39,7 +39,7 @@ const safeMarkdownJson = JSON.stringify(cleanMarkdown).replace(/<\/script/gi, '<
 <BaseLayout
   title={post.data.title}
   description={post.data.description}
-  image={post.data.coverImage}
+  image={post.data.coverImage || `/og/blog/${post.id}.svg`}
   article={true}
 >
   <nav class="zen-hide mb-5 flex items-center gap-2 font-mono text-xs text-[var(--text-muted)]">

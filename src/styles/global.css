@@ -677,6 +677,73 @@ html.zen-mode .zen-exit-pill {
   animation: eqPulse 1.2s ease-out;
 }
 
+/* Cross-paper concept reference dotted link + hover preview card */
+.prose-anka a.paper-ref-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+  border-radius: 3px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.prose-anka a.paper-ref-link:hover {
+  color: var(--accent);
+  background-color: var(--surface-soft);
+}
+
+.paper-ref-popover {
+  position: fixed;
+  z-index: 75;
+  width: min(340px, calc(100vw - 24px));
+  padding: 0.85rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border-strong);
+  background-color: var(--surface);
+  box-shadow: 0 18px 40px -12px rgba(24, 16, 40, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.paper-ref-popover.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* Resume Reading floating pill */
+.resume-pill {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 65;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: min(92vw, 380px);
+  padding: 0.55rem 0.9rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-strong);
+  background-color: var(--surface);
+  color: var(--text);
+  font-size: 0.78rem;
+  box-shadow: 0 14px 34px -10px rgba(99, 65, 142, 0.34);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.resume-pill.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
 /* ==========================================
    Academic Lecture-Handout Print / PDF Mode
    ========================================== */
@@ -703,8 +770,11 @@ html.zen-mode .zen-exit-pill {
   .heading-anchor-btn,
   .code-copy-btn,
   #search-modal,
+  #shortcuts-modal,
   #formula-sheet-modal,
   #anka-lightbox,
+  .resume-pill,
+  .paper-ref-popover,
   [data-copy-markdown],
   [data-copy-text],
   [data-formula-sheet-trigger],

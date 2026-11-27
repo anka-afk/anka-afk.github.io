@@ -16,8 +16,8 @@ interface ClusterRule {
 }
 
 const CLUSTER_RULES: ClusterRule[] = [
-  { id: 'cluster-pref', label: '偏好优化 / DPO', match: /dpo|偏好|最大似然|kl/i },
-  { id: 'cluster-rl', label: '强化学习 / 后训练', match: /强化学习|rl|奖励|策略|自我纠错|score|dpo|eto/i },
+  { id: 'cluster-pref', label: '偏好学习 / 对齐', match: /dpo|nlhf|nash|偏好|最大似然|kl|纳什/i },
+  { id: 'cluster-rl', label: '强化学习 / 后训练', match: /强化学习|rl|奖励|策略|自我纠错|score|dpo|eto|镜像下降|博弈/i },
   { id: 'cluster-agent', label: 'Agent / 轨迹探索', match: /agent|轨迹|探索|eto/i },
   { id: 'cluster-arch', label: '序列架构 / SSM', match: /mamba|状态空间|ssm|扫描|架构|transformer/i },
 ];

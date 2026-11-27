@@ -14,14 +14,46 @@ export async function getStaticPaths() {
     params: { id: paper.id },
     props: {
       paper,
+      allPapers: papers,
       prevPaper: idx > 0 ? papers[idx - 1] : null,
       nextPaper: idx < papers.length - 1 ? papers[idx + 1] : null,
     },
   }));
 }
 
-const { paper, prevPaper, nextPaper } = Astro.props;
+function inferConceptKeywords(id: string, title: string): string[] {
+  const slugKey = id.replace(/^\d+-/, '').trim();
+  const knownMap: Record<string, string[]> = {
+    dpo: ['DPO'],
+    score: ['SCoRe'],
+    mamba: ['Mamba'],
+    eto: ['ETO'],
+    nlhf: ['NLHF'],
+  };
+  if (knownMap[slugKey.toLowerCase()]) return knownMap[slugKey.toLowerCase()];
+
+  // Fallback: extract explicit acronym from title or uppercase short slug
+  const acro = title.match(/\b[A-Z][A-Za-z0-9]{1,7}\b/);
+  if (acro && acro[0].length >= 2) return [acro[0]];
+  if (/^[a-z]{2,6}$/i.test(slugKey)) return [slugKey.toUpperCase()];
+  return [];
+}
+
+const { paper, allPapers, prevPaper, nextPaper } = Astro.props;
 const { Content, headings } = await render(paper);
+
+const otherPaperRefs = allPapers
+  .filter((p) => p.id !== paper.id)
+  .map((p) => ({
+    keywords: inferConceptKeywords(p.id, p.data.title),
+    number: p.data.number,
+    title: p.data.displayTitle,
+    venue: p.data.venue ? p.data.venue.split('（')[0] : '',
+    summary: p.data.summary,
+    url: `/papers/${p.id}`,
+  }))
+  .filter((r) => r.keywords.length > 0);
+const safeRefsJson = JSON.stringify(otherPaperRefs).replace(/<\/script/gi, '<\\/script');
 
 const pageUrl = `${SITE.url}/papers/${paper.id}`;
 const cleanMarkdown = buildCleanMarkdown(paper.body || '', {
@@ -73,6 +105,14 @@ const bibtexText = buildPaperBibtex({
       }
       <span>·</span>
       <span>约 {paper.data.readingMinutes} 分钟</span>
+      {
+        paper.data.formulaCount > 0 && (
+          <>
+            <span>·</span>
+            <span>{paper.data.formulaCount} 块公式</span>
+          </>
+        )
+      }
       <span>·</span>
       <time>更新于 {formatDate(paper.data.updatedAt)}</time>
     </div>
@@ -267,5 +307,6 @@ const bibtexText = buildPaperBibtex({
   </div>
 
   <script id="anka-raw-markdown" type="application/json" set:html={safeMarkdownJson} />
+  <script id="anka-paper-refs" type="application/json" set:html={safeRefsJson} />
   <ReadingEnhancements />
 </BaseLayout>

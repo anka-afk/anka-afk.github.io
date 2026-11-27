@@ -9,11 +9,20 @@ export function formatDate(date: Date | string): string {
 }
 
 export function estimateReadingMinutes(text: string): number {
+  const displayEqs =
+    (text.match(/^```math\b/gm) || []).length + Math.floor((text.match(/\$\$/g) || []).length / 2);
+  const inlineEqs = (text.match(/\$`[^`\r\n]+`\$/g) || []).length;
+  const imgs = (text.match(/!\[[^\]]*\]\([^)]+\)/g) || []).length;
+
   const clean = text
     .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/\$\$[\s\S]*?\$\$/g, ' ')
     .replace(/\$`[^`]+`\$/g, ' ')
     .replace(/!\[[^\]]*\]\([^)]+\)/g, ' ');
   const cjk = (clean.match(/[\u4e00-\u9fff]/g) || []).length;
   const words = (clean.match(/[a-zA-Z0-9_]+/g) || []).length;
-  return Math.max(1, Math.ceil((cjk + words * 0.7) / 360));
+  return Math.max(
+    1,
+    Math.ceil((cjk + words * 0.75) / 260 + displayEqs * 0.3 + inlineEqs * 0.04 + imgs * 0.2)
+  );
 }

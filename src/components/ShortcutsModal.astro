@@ -99,7 +99,7 @@
           <h3 class="font-mono text-[11px] font-semibold tracking-wider text-[var(--accent)] uppercase">
             小彩蛋
           </h3>
-          <span data-egg-progress class="font-mono text-[11px] text-[var(--text-muted)]">已发现 0/7</span>
+          <span data-egg-progress class="font-mono text-[11px] text-[var(--text-muted)]">已发现 0/8</span>
         </div>
         <div class="space-y-1.5 text-[var(--text-muted)]">
           <p>· 首页连续点击头像 <strong class="text-[var(--text-secondary)]">5 次</strong>，切换 Attention 背景采样温度</p>
@@ -135,7 +135,7 @@
     }
 
     function isAnyOtherModalOpen() {
-      const ids = ['search-modal', 'formula-sheet-modal', 'anka-lightbox'];
+      const ids = ['search-modal', 'formula-sheet-modal', 'anka-lightbox', 'atri-modal'];
       return ids.some((id) => {
         const el = document.getElementById(id);
         return el && !el.classList.contains('hidden');

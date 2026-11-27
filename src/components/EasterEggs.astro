@@ -38,6 +38,7 @@
       { id: 'cli', label: '隐藏终端 /cli' },
       { id: '404', label: '局部极小值 /404 梯度下降' },
       { id: 'console', label: 'F12 控制台 anka()' },
+      { id: 'atri', label: '高性能ですから！（ATRI 彩蛋）' },
     ];
     const TOTAL = EGG_CATALOG.length;
 
@@ -234,7 +235,7 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && document.documentElement.classList.contains('arxiv-mode')) {
         // Don't hijack Escape if a modal is currently open
-        const modalOpen = ['search-modal', 'shortcuts-modal', 'formula-sheet-modal', 'anka-lightbox'].some((id) => {
+        const modalOpen = ['search-modal', 'shortcuts-modal', 'formula-sheet-modal', 'anka-lightbox', 'atri-modal'].some((id) => {
           const el = document.getElementById(id);
           return el && !el.classList.contains('hidden');
         });

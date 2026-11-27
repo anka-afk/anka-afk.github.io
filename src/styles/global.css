@@ -854,6 +854,33 @@ html.loss-exploding body {
 }
 
 /* ==========================================
+   Easter Egg 3: ATRI Headpat Floating Hearts
+   ========================================== */
+@keyframes atri-float-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.7);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -56px) scale(0.9);
+  }
+}
+
+.atri-heart-float {
+  position: absolute;
+  pointer-events: none;
+  font-size: 1.15rem;
+  color: #fb7185;
+  text-shadow: 0 2px 10px rgba(56, 189, 248, 0.55);
+  animation: atri-float-up 0.9s ease-out forwards;
+}
+
+/* ==========================================
    Academic Lecture-Handout Print / PDF Mode
    ========================================== */
 @page {
@@ -882,6 +909,8 @@ html.loss-exploding body {
   #shortcuts-modal,
   #formula-sheet-modal,
   #anka-lightbox,
+  #atri-modal,
+  #atri-companion,
   .resume-pill,
   .paper-ref-popover,
   .arxiv-watermark,

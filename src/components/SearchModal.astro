@@ -184,9 +184,20 @@ import { SITE } from '../site.config';
           run: () => navigateTo('/404', false),
         },
         {
+          id: 'cmd-atri',
+          title: '> atri · 高性能ですから！',
+          summary: '唤醒 ATRI -My Dear Moments- 纪念浮卡（任意处直敲 atri 也可触发）',
+          badge: 'FUN',
+          keywords: 'atri 亚托莉 高性能 螃蟹 crab my dear moments 彩蛋',
+          run: () => {
+            closeModal();
+            window.dispatchEvent(new CustomEvent('anka-open-atri'));
+          },
+        },
+        {
           id: 'cmd-eggs',
           title: '> eggs · 查看当前彩蛋收集进度',
-          summary: '查看本地已触发的隐藏彩蛋数量（共 7 个）',
+          summary: '查看本地已触发的隐藏彩蛋数量（共 8 个）',
           badge: 'FUN',
           keywords: 'eggs easter 彩蛋 进度 成就',
           run: () => {

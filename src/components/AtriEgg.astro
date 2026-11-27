@@ -1,0 +1,478 @@
+---
+// Hidden ATRI -My Dear Moments- Easter Egg
+// Triggered via typing 'atri' anywhere, '> atri' in search, 'atri'/'crab' in /cli, or anka('atri').
+// Images are 100% lazy-loaded on demand (0 bytes downloaded unless triggered).
+---
+
+<!-- ATRI Galgame Memorial Modal -->
+<div
+  id="atri-modal"
+  class="fixed inset-0 z-55 hidden items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm"
+  role="dialog"
+  aria-modal="true"
+  aria-label="ATRI 彩蛋"
+>
+  <div
+    class="w-full max-w-2xl overflow-hidden rounded-2xl border border-sky-400/35 bg-[var(--surface)] shadow-2xl"
+    style="box-shadow: 0 24px 60px -16px rgba(14, 165, 233, 0.28);"
+  >
+    <!-- Top Status Bar -->
+    <div
+      class="flex items-center justify-between border-b border-[var(--border)] bg-gradient-to-r from-sky-500/10 via-transparent to-purple-500/10 px-4 py-2.5 font-mono text-[11px]"
+    >
+      <div class="flex items-center gap-2 text-[var(--text-secondary)]">
+        <span class="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]"></span>
+        <span class="font-semibold text-sky-600 dark:text-sky-300">ATRI -My Dear Moments-</span>
+        <span class="hidden text-[var(--text-muted)] sm:inline">· LOG #45 · HIGH-PERFORMANCE</span>
+      </div>
+      <button
+        type="button"
+        id="atri-close"
+        aria-label="关闭 ATRI 彩蛋"
+        class="cursor-pointer rounded-md px-2 py-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-soft)] hover:text-sky-500"
+      >
+        ESC
+      </button>
+    </div>
+
+    <!-- Interactive CG Stage -->
+    <div
+      id="atri-stage"
+      class="group relative aspect-video w-full cursor-pointer overflow-hidden bg-sky-50 select-none dark:bg-[#131824]"
+      title="点一下摸摸亚托莉的头"
+    >
+      <img
+        id="atri-cg-img"
+        alt="ATRI illustration"
+        class="h-full w-full object-cover transition-all duration-300"
+        decoding="async"
+      />
+      <div
+        class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 to-transparent"
+      ></div>
+      <div
+        class="pointer-events-none absolute right-3 bottom-2 left-3 flex items-center justify-between font-mono text-[10px] text-white/85"
+      >
+        <span id="atri-pat-hint" class="rounded-full bg-black/35 px-2.5 py-0.5 backdrop-blur-xs">
+          点画面摸摸头 · 切换表情
+        </span>
+        <span class="opacity-80">Illust: ユカリ (Pixiv 146699921)</span>
+      </div>
+    </div>
+
+    <!-- Galgame Dialogue Box -->
+    <div class="px-5 py-4">
+      <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <div class="flex items-baseline gap-2">
+          <span class="text-sm font-extrabold tracking-tight text-sky-600 dark:text-sky-300">
+            アトリ · ATRI
+          </span>
+          <span id="atri-jp-line" class="font-mono text-[11px] text-[var(--text-muted)]"></span>
+        </div>
+        <div id="atri-dots" class="flex items-center gap-1.5" aria-label="切换差分表情"></div>
+      </div>
+
+      <p
+        id="atri-dialogue"
+        class="min-h-[3.2rem] cursor-pointer text-sm leading-relaxed text-[var(--text)]"
+        title="点击跳过打字或下一句"
+      ></p>
+
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3 text-xs">
+        <button
+          type="button"
+          id="atri-companion-toggle"
+          class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1 font-mono text-[11px] text-[var(--text-secondary)] transition-colors hover:border-sky-400 hover:text-sky-600 dark:hover:text-sky-300"
+        >
+          <span>☆</span>
+          <span id="atri-companion-label">让亚托莉在角落陪读</span>
+        </button>
+
+        <div class="flex items-center gap-3">
+          <span id="atri-pat-count" class="hidden font-mono text-[11px] text-[var(--text-muted)]"></span>
+          <button
+            type="button"
+            id="atri-next-btn"
+            class="cursor-pointer rounded-lg bg-sky-500/15 px-3 py-1 font-mono text-[11px] font-semibold text-sky-700 transition-colors hover:bg-sky-500/25 dark:text-sky-300"
+          >
+            下一句 ↵
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Optional Mini Companion Peek Widget (OFF by default, only appears if toggled ON) -->
+<div
+  id="atri-companion"
+  class="zen-hide fixed bottom-5 left-5 z-45 hidden items-end gap-2.5"
+>
+  <div class="group relative">
+    <div
+      id="atri-bubble"
+      class="pointer-events-none absolute bottom-full left-0 mb-2 hidden w-max max-w-[230px] rounded-xl border border-sky-400/35 bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text)] shadow-lg"
+    ></div>
+
+    <button
+      type="button"
+      id="atri-peek-btn"
+      title="单击听亚托莉说一句话 · 双击打开完整纪念卡"
+      class="relative h-13 w-13 cursor-pointer overflow-hidden rounded-full border-2 border-sky-400/75 bg-[var(--surface)] shadow-lg transition-transform hover:-translate-y-0.5 hover:scale-105"
+    >
+      <img id="atri-peek-img" alt="ATRI 陪读挂件" class="h-full w-full object-cover" decoding="async" />
+    </button>
+
+    <button
+      type="button"
+      id="atri-peek-dismiss"
+      aria-label="收起亚托莉陪读挂件"
+      title="让亚托莉回去休息"
+      class="absolute -top-1 -right-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] font-mono text-[10px] text-[var(--text-muted)] opacity-0 shadow-xs transition-opacity group-hover:opacity-100 hover:text-sky-500"
+    >
+      ×
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    if (window.__ankaAtriInit) return;
+    window.__ankaAtriInit = true;
+
+    const COMPANION_KEY = 'anka-atri-companion';
+
+    const SCENES = [
+      {
+        id: 'peace',
+        img: '/atri/peace.webp',
+        jp: '「高性能ですから！」',
+        text: '「我可是高性能的！」不管是帮站长看管《推断智能》的公式推导，还是顺手盯着 GPU 显存，都完全不在话下哦。',
+      },
+      {
+        id: 'closeup',
+        img: '/atri/closeup.webp',
+        jp: '「ご命令を、マスター！」',
+        text: '咦？不是夏生先生，是来读论文的新访客呀。需要我帮你按 f 把公式速览抽屉调出来，或者一起看下一节吗？',
+      },
+      {
+        id: 'smile',
+        img: '/atri/smile.webp',
+        jp: '「沈みゆく世界で、君をみつけた。」',
+        text: '「在逐渐沉没的世界里，我找到了你。」就算不小心掉进 /404 的局部极小值，亚托莉也会把你拉回海面上的。',
+      },
+      {
+        id: 'heart',
+        img: '/atri/heart.webp',
+        jp: '「My Dear Moments」',
+        text: '记忆日志已保存。你在这里认真读完一段推导的时光，对我来说也是很珍贵的『My Dear Moments』呢。',
+      },
+      {
+        id: 'curious',
+        img: '/atri/curious.webp',
+        jp: '「かに……ですか？」',
+        text: '螃蟹……不对，是刚刚同步上来的新论文手稿！听说只要站长一推代码，这座小岛就会自动长出新文章呢。',
+      },
+      {
+        id: 'stare',
+        img: '/atri/stare.webp',
+        jp: '「省電力モードのご案内」',
+        text: '如果推导公式推到太晚，就算是我也会建议你开启省电模式的……记得早点休息，明天再调参也不迟哦。',
+      },
+    ];
+
+    const MINI_LINES = [
+      '「高性能ですから！」',
+      '这行推导应该没漏归一化常数 Z(x) 吧？',
+      '读累了的话，记得喝口水歇一会哦。',
+      '刚才好像闻到了螃蟹的味道……错觉吗？',
+      '双击我可以打开完整的纪念对话框哦。',
+      '「沈みゆく世界で、君をみつけた。」',
+    ];
+
+    let sceneIdx = 0;
+    let patCount = 0;
+    let typingTimer = null;
+    let fullLine = '';
+    let isTyping = false;
+    let keyBuf = '';
+    let keyBufTimer = null;
+    let bubbleTimer = null;
+    let miniIdx = 0;
+
+    function isCompanionOn() {
+      try {
+        return localStorage.getItem(COMPANION_KEY) === '1';
+      } catch {
+        return false;
+      }
+    }
+
+    function setCompanionOn(on) {
+      try {
+        localStorage.setItem(COMPANION_KEY, on ? '1' : '0');
+      } catch {}
+      syncCompanionUi();
+    }
+
+    function syncCompanionUi() {
+      const box = document.getElementById('atri-companion');
+      const peekImg = document.getElementById('atri-peek-img');
+      const toggleLabel = document.getElementById('atri-companion-label');
+      const on = isCompanionOn();
+
+      if (box) {
+        box.classList.toggle('hidden', !on);
+        box.classList.toggle('flex', on);
+      }
+      if (on && peekImg && !peekImg.getAttribute('src')) {
+        peekImg.setAttribute('src', '/atri/peek.webp');
+      }
+      if (toggleLabel) {
+        toggleLabel.textContent = on ? '亚托莉正在角落陪读（点击收回）' : '让亚托莉在角落陪读';
+      }
+    }
+
+    function stopTyping() {
+      clearInterval(typingTimer);
+      typingTimer = null;
+      isTyping = false;
+    }
+
+    function renderDots() {
+      const dotsEl = document.getElementById('atri-dots');
+      if (!dotsEl) return;
+      dotsEl.innerHTML = SCENES.map(
+        (s, i) =>
+          `<button type="button" data-atri-dot="${i}" aria-label="切换差分 ${i + 1}" class="h-2 cursor-pointer rounded-full transition-all ${
+            i === sceneIdx ? 'w-5 bg-sky-400' : 'w-2 bg-[var(--border-strong)] hover:bg-sky-400/60'
+          }"></button>`
+      ).join('');
+    }
+
+    function showScene(idx, customText) {
+      const img = document.getElementById('atri-cg-img');
+      const jpEl = document.getElementById('atri-jp-line');
+      const textEl = document.getElementById('atri-dialogue');
+      if (!img || !textEl) return;
+
+      sceneIdx = ((idx % SCENES.length) + SCENES.length) % SCENES.length;
+      const sc = SCENES[sceneIdx];
+
+      img.style.opacity = '0.35';
+      img.onload = () => {
+        img.style.opacity = '1';
+      };
+      img.setAttribute('src', sc.img);
+      if (img.complete) img.style.opacity = '1';
+
+      if (jpEl) jpEl.textContent = sc.jp;
+      renderDots();
+
+      stopTyping();
+      fullLine = customText || sc.text;
+      textEl.textContent = '';
+      isTyping = true;
+      let pos = 0;
+      typingTimer = setInterval(() => {
+        pos += 1;
+        textEl.textContent = fullLine.slice(0, pos);
+        if (pos >= fullLine.length) {
+          stopTyping();
+        }
+      }, 24);
+    }
+
+    function spawnFloatHeart(stage, clientX, clientY) {
+      const rect = stage.getBoundingClientRect();
+      const el = document.createElement('span');
+      el.className = 'atri-heart-float';
+      el.textContent = Math.random() > 0.35 ? '♥' : '✦';
+      el.style.left = `${clientX - rect.left}px`;
+      el.style.top = `${clientY - rect.top}px`;
+      stage.appendChild(el);
+      setTimeout(() => el.remove(), 900);
+    }
+
+    function openAtri(startSceneId) {
+      const modal = document.getElementById('atri-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      syncCompanionUi();
+
+      let startIdx = 0;
+      if (startSceneId) {
+        const found = SCENES.findIndex((s) => s.id === startSceneId);
+        if (found !== -1) startIdx = found;
+      } else {
+        const hour = new Date().getHours();
+        if (hour >= 0 && hour < 5) startIdx = 5; // Midnight sleep reminder first!
+      }
+
+      showScene(startIdx);
+      window.__ankaEggs?.unlock('atri', '「高性能ですから！」· 唤醒了 ATRI 彩蛋', {
+        onlyOnNew: true,
+        duration: 3200,
+      });
+    }
+
+    function closeAtri() {
+      const modal = document.getElementById('atri-modal');
+      if (!modal) return;
+      stopTyping();
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function showMiniBubble(customMsg) {
+      const bubble = document.getElementById('atri-bubble');
+      if (!bubble) return;
+      const msg = customMsg || MINI_LINES[miniIdx % MINI_LINES.length];
+      miniIdx += 1;
+      bubble.textContent = msg;
+      bubble.classList.remove('hidden');
+      clearTimeout(bubbleTimer);
+      bubbleTimer = setTimeout(() => bubble.classList.add('hidden'), 3200);
+    }
+
+    // Event delegation for modal + companion interactions
+    document.addEventListener('click', (e) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
+
+      const modal = document.getElementById('atri-modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        if (target === modal || target.closest('#atri-close')) {
+          closeAtri();
+          return;
+        }
+        const dot = target.closest('[data-atri-dot]');
+        if (dot) {
+          const i = parseInt(dot.getAttribute('data-atri-dot') || '0', 10);
+          showScene(i);
+          return;
+        }
+        if (target.closest('#atri-next-btn') || target.closest('#atri-dialogue')) {
+          if (isTyping) {
+            stopTyping();
+            const textEl = document.getElementById('atri-dialogue');
+            if (textEl) textEl.textContent = fullLine;
+          } else {
+            showScene(sceneIdx + 1);
+          }
+          return;
+        }
+        if (target.closest('#atri-companion-toggle')) {
+          const next = !isCompanionOn();
+          setCompanionOn(next);
+          if (next) {
+            closeAtri();
+            showMiniBubble('「高性能ですから！」我在左下角陪你读论文哦。');
+          }
+          return;
+        }
+        const stage = target.closest('#atri-stage');
+        if (stage) {
+          patCount += 1;
+          spawnFloatHeart(stage, e.clientX, e.clientY);
+          const countEl = document.getElementById('atri-pat-count');
+          if (countEl) {
+            countEl.textContent = `摸头 ×${patCount}`;
+            countEl.classList.remove('hidden');
+          }
+          if (patCount === 5) {
+            showScene(
+              3,
+              '一直摸头的话……就算是我，处理器温度也是会升高的哦。（不过，好像并不讨厌呢。）'
+            );
+          } else {
+            showScene(sceneIdx + 1);
+          }
+          return;
+        }
+      }
+
+      // Companion controls
+      if (target.closest('#atri-peek-dismiss')) {
+        e.stopPropagation();
+        setCompanionOn(false);
+        return;
+      }
+      if (target.closest('#atri-peek-btn')) {
+        showMiniBubble();
+      }
+    });
+
+    document.addEventListener('dblclick', (e) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (target?.closest('#atri-peek-btn')) {
+        openAtri();
+      }
+    });
+
+    // Global secret sequence 'atri' + Escape close
+    document.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('atri-modal');
+      const isOpen = modal && !modal.classList.contains('hidden');
+
+      if (e.key === 'Escape' && isOpen) {
+        e.preventDefault();
+        closeAtri();
+        return;
+      }
+
+      if (isOpen && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        if (isTyping) {
+          stopTyping();
+          const textEl = document.getElementById('atri-dialogue');
+          if (textEl) textEl.textContent = fullLine;
+        } else {
+          showScene(sceneIdx + 1);
+        }
+        return;
+      }
+
+      const tag = document.activeElement?.tagName;
+      const inEditable =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        document.activeElement?.isContentEditable;
+      if (inEditable || e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+
+      // Ignore if another modal is open
+      const otherOpen = ['search-modal', 'shortcuts-modal', 'formula-sheet-modal', 'anka-lightbox'].some((id) => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains('hidden');
+      });
+      if (otherOpen || isOpen) return;
+
+      keyBuf = (keyBuf + e.key.toLowerCase()).slice(-4);
+      clearTimeout(keyBufTimer);
+      keyBufTimer = setTimeout(() => {
+        keyBuf = '';
+      }, 2600);
+
+      if (keyBuf === 'atri') {
+        keyBuf = '';
+        openAtri();
+      }
+    });
+
+    window.addEventListener('anka-open-atri', (e) => {
+      openAtri(e.detail?.scene);
+    });
+
+    document.addEventListener('astro:before-swap', () => {
+      closeAtri();
+    });
+
+    document.addEventListener('astro:page-load', () => {
+      syncCompanionUi();
+    });
+
+    syncCompanionUi();
+  })();
+</script>

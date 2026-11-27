@@ -7,6 +7,7 @@ import Footer from '../components/Footer.astro';
 import SearchModal from '../components/SearchModal.astro';
 import ShortcutsModal from '../components/ShortcutsModal.astro';
 import EasterEggs from '../components/EasterEggs.astro';
+import AtriEgg from '../components/AtriEgg.astro';
 import { SITE } from '../site.config';
 
 interface Props {
@@ -93,6 +94,7 @@ const ogImage = new URL(image || '/og/home.svg', SITE.url).toString();
     <SearchModal />
     <ShortcutsModal />
     <EasterEggs />
+    <AtriEgg />
 
     <!-- Delegated cursor spotlight + DevTools console Easter egg -->
     <script is:inline>
@@ -159,6 +161,10 @@ const ogImage = new URL(image || '/og/home.svg', SITE.url).toString();
               window.dispatchEvent(new CustomEvent('anka-toggle-arxiv'));
               return '已切换 arXiv 预印本排版';
             }
+            if (cmd === 'atri') {
+              window.dispatchEvent(new CustomEvent('anka-open-atri'));
+              return '「高性能ですから！」';
+            }
             if (cmd === 'eggs') {
               const api = window.__ankaEggs;
               if (!api) return '彩蛋系统未初始化';
@@ -175,7 +181,7 @@ const ogImage = new URL(image || '/og/home.svg', SITE.url).toString();
             console.log(
               '%c∑ anka()%c ' +
                 pick +
-                '\n%c可用参数：anka("cli") | anka("arxiv") | anka("nan") | anka("temp") | anka("eggs") | anka("404")',
+                '\n%c可用参数：anka("atri") | anka("cli") | anka("arxiv") | anka("nan") | anka("temp") | anka("eggs") | anka("404")',
               'color:#63418E;font-weight:700;font-family:monospace;',
               'color:inherit;',
               'color:#888;font-family:monospace;'

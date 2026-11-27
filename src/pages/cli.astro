@@ -137,6 +137,8 @@ const safeCliJson = JSON.stringify(cliPayload).replace(/<\/script/gi, '<\\/scrip
       'open',
       'train',
       'fortune',
+      'atri',
+      'crab',
       'clear',
       'exit',
       'sudo',
@@ -393,6 +395,18 @@ const safeCliJson = JSON.stringify(cliPayload).replace(/<\/script/gi, '<\\/scrip
         if (cmd === 'fortune') {
           const pick = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
           appendLine(`∑ ${escapeHtml(pick)}`, 'text-[#d8baff]');
+          return;
+        }
+
+        if (cmd === 'atri') {
+          appendLine('「高性能ですから！」正在唤醒 ATRI 纪念浮卡...', 'text-[#38bdf8]');
+          window.dispatchEvent(new CustomEvent('anka-open-atri'));
+          return;
+        }
+
+        if (cmd === 'crab' || cmd === 'かに') {
+          appendLine('🦀 检测到螃蟹信号：亚托莉两眼放光地凑了过来...', 'text-[#38bdf8]');
+          window.dispatchEvent(new CustomEvent('anka-open-atri', { detail: { scene: 'curious' } }));
           return;
         }
 

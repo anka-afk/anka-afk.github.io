@@ -1,43 +1,160 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const papers = (await getCollection('papers')).map((p) => ({
+  title: p.data.displayTitle,
+  url: `/papers/${p.id}`,
+}));
+const safePapersJson = JSON.stringify(papers).replace(/<\/script/gi, '<\\/script');
 ---
 
 <BaseLayout title="404">
-  <section class="mx-auto my-6 max-w-2xl">
-    <div class="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+  <section class="mx-auto my-4 max-w-3xl">
+    <!-- Header + Escape Status -->
+    <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <div class="font-mono text-xs font-semibold text-[var(--accent)]">ERROR 404 · LOCAL MINIMUM</div>
+        <div class="flex items-center gap-2 font-mono text-xs font-semibold text-[var(--accent)]">
+          <span>ERROR 404 · LOCAL MINIMUM</span>
+          <span
+            id="gd-best-badge"
+            class="hidden rounded-full bg-[var(--surface-soft)] px-2 py-0.5 text-[10px] text-[var(--accent)]"
+          ></span>
+        </div>
         <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[var(--text)] sm:text-3xl">
           卡在了局部极小值里
         </h1>
-        <p class="mt-1.5 text-sm text-[var(--text-secondary)]">
-          你访问的页面不存在。点下方等高线任意位置投放初始点，或者直接回首页重新初始化。
+        <p class="mt-1.5 text-xs leading-relaxed text-[var(--text-secondary)] sm:text-sm">
+          轻点投放 · 按住拖拽弹射初速度 · 右键 / <kbd class="rounded bg-[var(--surface-soft)] px-1 font-mono text-[11px] text-[var(--accent)]">Shift</kbd>+点击 现挖一个坑。把参数送进 <strong class="text-[var(--text)]">global min ★</strong> 即可逃离 404。
         </p>
       </div>
     </div>
 
-    <!-- Interactive 2D Loss Landscape -->
+    <!-- Main Interactive Optimizer Lab Card -->
     <div class="bento-card overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5 font-mono text-xs">
-        <div class="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5">
+      <!-- Row 1: Optimizers & Landscapes -->
+      <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-[var(--border)] px-3.5 py-2.5 font-mono text-[11px]">
+        <!-- Optimizer Switcher -->
+        <div class="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5">
+          <button
+            type="button"
+            data-gd-opt="race"
+            class="cursor-pointer rounded-md bg-[var(--surface-soft)] px-2 py-1 font-semibold text-[var(--accent)] transition-colors"
+            title="一次点击同时释放 4 种优化器竞速"
+          >
+            同点竞速
+          </button>
           <button
             type="button"
             data-gd-opt="sgd"
-            class="cursor-pointer rounded-md bg-[var(--surface-soft)] px-2.5 py-1 font-semibold text-[var(--accent)] transition-colors"
+            class="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
           >
-            SGD
+            <span class="h-1.5 w-1.5 rounded-full bg-[#8B5CF6]"></span>SGD
           </button>
           <button
             type="button"
             data-gd-opt="momentum"
-            class="cursor-pointer rounded-md px-2.5 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+            class="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
           >
-            Momentum
+            <span class="h-1.5 w-1.5 rounded-full bg-[#14B8A6]"></span>Mom
+          </button>
+          <button
+            type="button"
+            data-gd-opt="adam"
+            class="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-[#F59E0B]"></span>Adam
+          </button>
+          <button
+            type="button"
+            data-gd-opt="sgld"
+            class="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-[#EC4899]"></span>SGLD
           </button>
         </div>
 
-        <div class="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
-          <span id="gd-readout">loss: — · step: 0</span>
+        <!-- Landscape Switcher -->
+        <div class="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5">
+          <button
+            type="button"
+            data-gd-map="404"
+            class="cursor-pointer rounded-md bg-[var(--surface-soft)] px-2 py-1 font-semibold text-[var(--accent)] transition-colors"
+          >
+            404 多峰
+          </button>
+          <button
+            type="button"
+            data-gd-map="rosenbrock"
+            class="cursor-pointer rounded-md px-2 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            Rosenbrock
+          </button>
+          <button
+            type="button"
+            data-gd-map="saddle"
+            class="cursor-pointer rounded-md px-2 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            Saddle
+          </button>
+          <button
+            type="button"
+            data-gd-map="rastrigin"
+            class="cursor-pointer rounded-md px-2 py-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            Rastrigin
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2: Hyperparameter Sliders + Toggles -->
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[var(--border)] bg-[var(--bg)]/55 px-3.5 py-2 font-mono text-[11px] text-[var(--text-muted)]">
+        <div class="flex flex-wrap items-center gap-4">
+          <label class="inline-flex items-center gap-2">
+            <span>lr</span>
+            <input
+              id="gd-lr"
+              type="range"
+              min="0.01"
+              max="1.20"
+              step="0.01"
+              value="0.06"
+              class="h-1.5 w-20 cursor-pointer accent-[var(--accent)] sm:w-24"
+            />
+            <span id="gd-lr-val" class="w-9 text-[var(--text)]">0.06</span>
+          </label>
+
+          <label class="inline-flex items-center gap-2">
+            <span>σ 噪声</span>
+            <input
+              id="gd-noise"
+              type="range"
+              min="0"
+              max="0.50"
+              step="0.02"
+              value="0"
+              class="h-1.5 w-16 cursor-pointer accent-[var(--accent)] sm:w-20"
+            />
+            <span id="gd-noise-val" class="w-8 text-[var(--text)]">0.00</span>
+          </label>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button
+            id="gd-field-toggle"
+            type="button"
+            class="cursor-pointer rounded-md border border-[var(--border)] px-2 py-0.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            title="叠加负梯度向量场 -∇L"
+          >
+            -∇L 场
+          </button>
+          <button
+            id="gd-reset-pits"
+            type="button"
+            class="hidden cursor-pointer text-[var(--text-secondary)] transition-colors hover:text-[var(--accent)]"
+          >
+            填平自挖坑
+          </button>
           <button
             id="gd-clear"
             type="button"
@@ -48,28 +165,65 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
       </div>
 
-      <canvas
-        id="gd-canvas"
-        class="block h-[300px] w-full cursor-crosshair sm:h-[340px]"
-        aria-label="二维损失曲面梯度下降交互画布"
-      ></canvas>
+      <!-- Main 2D Loss Landscape Canvas -->
+      <div class="relative">
+        <canvas
+          id="gd-canvas"
+          class="block h-[330px] w-full cursor-crosshair touch-none select-none sm:h-[390px]"
+          aria-label="二维损失曲面优化器交互画布"
+        ></canvas>
+
+        <!-- Subtle floating status pill inside canvas bottom-left -->
+        <div
+          id="gd-status"
+          class="pointer-events-none absolute bottom-2.5 left-3 max-w-[calc(100%-1.5rem)] truncate rounded-full border border-[var(--border)] bg-[var(--surface)]/88 px-3 py-1 font-mono text-[11px] text-[var(--text-secondary)] backdrop-blur-xs"
+        >
+          点击或按住拖拽，投放第一组参数…
+        </div>
+      </div>
+
+      <!-- Row 3: Live Mini Loss Curve (Sparkline) -->
+      <div class="border-t border-[var(--border)] bg-[var(--bg)]/45 px-3.5 py-2">
+        <div class="mb-1 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] text-[var(--text-muted)]">
+          <span>LIVE LOSS CURVE</span>
+          <span id="gd-readout" class="truncate">等待投放…</span>
+        </div>
+        <canvas
+          id="gd-loss-canvas"
+          class="block h-[66px] w-full"
+          aria-label="实时 Loss 收敛折线图"
+        ></canvas>
+      </div>
     </div>
 
-    <div class="mt-6 flex flex-wrap items-center gap-4 text-xs">
-      <a
-        href="/"
-        class="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
+    <!-- Bottom Navigation + Escape Portal -->
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-4 text-xs">
+      <div class="flex flex-wrap items-center gap-4">
+        <a
+          href="/"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
+        >
+          回首页重新初始化 →
+        </a>
+        <a
+          href="/papers"
+          class="font-mono text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
+        >
+          阅读《推断智能》 ↗
+        </a>
+      </div>
+
+      <button
+        id="gd-escape-portal"
+        type="button"
+        class="hidden cursor-pointer items-center gap-1.5 rounded-xl border border-[var(--accent)] bg-[var(--surface-soft)] px-3.5 py-2 font-mono text-xs font-semibold text-[var(--accent)] transition-all hover:opacity-90"
       >
-        回首页重新初始化 →
-      </a>
-      <a
-        href="/papers"
-        class="font-mono text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
-      >
-        阅读《推断智能》 ↗
-      </a>
+        ✦ 逃离传送门：随机一篇论文 →
+      </button>
     </div>
   </section>
+
+  <script id="gd-papers-data" type="application/json" set:html={safePapersJson} />
 </BaseLayout>
 
 <script is:inline>
@@ -78,9 +232,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     function initGdPlayground() {
       const canvas = document.getElementById('gd-canvas');
+      const lossCanvas = document.getElementById('gd-loss-canvas');
       const readout = document.getElementById('gd-readout');
+      const statusEl = document.getElementById('gd-status');
+      const bestBadge = document.getElementById('gd-best-badge');
       const clearBtn = document.getElementById('gd-clear');
-      if (!(canvas instanceof HTMLCanvasElement)) return;
+      const resetPitsBtn = document.getElementById('gd-reset-pits');
+      const fieldBtn = document.getElementById('gd-field-toggle');
+      const lrInput = document.getElementById('gd-lr');
+      const lrVal = document.getElementById('gd-lr-val');
+      const noiseInput = document.getElementById('gd-noise');
+      const noiseVal = document.getElementById('gd-noise-val');
+      const portalBtn = document.getElementById('gd-escape-portal');
+      const papersEl = document.getElementById('gd-papers-data');
+
+      if (!(canvas instanceof HTMLCanvasElement) || !(lossCanvas instanceof HTMLCanvasElement)) return;
       if (canvas.dataset.running === '1') return;
 
       if (stopGd) {
@@ -89,26 +255,176 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
 
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const lctx = lossCanvas.getContext('2d');
+      if (!ctx || !lctx) return;
       canvas.dataset.running = '1';
-      window.__ankaEggs?.unlock('404', '掉进了局部极小值（/404 梯度下降）', { onlyOnNew: true });
 
-      // Domain [-3, 3] x [-2, 2]
+      window.__ankaEggs?.unlock('404', '掉进了局部极小值（/404 优化器游乐场）', { onlyOnNew: true });
+
+      let paperList = [];
+      try {
+        paperList = JSON.parse(papersEl?.textContent || '[]');
+      } catch {}
+
       const X_MIN = -3;
       const X_MAX = 3;
       const Y_MIN = -2;
       const Y_MAX = 2;
+      const BEST_KEY = 'anka-404-best-steps';
 
-      // Multi-well non-convex loss landscape (1 deeper global minimum, 2 local minima, saddle ridges)
-      const WELLS = [
+      // Standard Gaussian sample (Box-Muller)
+      function randn() {
+        let u = 0;
+        let v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+      }
+
+      const WELLS_404 = [
         { cx: -1.5, cy: -0.35, amp: 1.32, s: 0.65 },
         { cx: 1.4, cy: 0.25, amp: 1.92, s: 0.72 },
         { cx: -0.05, cy: 1.08, amp: 0.88, s: 0.45 },
       ];
 
+      const LANDSCAPES = {
+        '404': {
+          name: '404 多峰谷',
+          globalMin: { x: 1.4, y: 0.25, label: 'global min ★', radius: 0.3 },
+          localTrap: { x: -1.5, y: -0.35, label: 'local min (404)', radius: 0.36 },
+          demoPoint: [-0.42, -0.95],
+          loss(x, y) {
+            let v = 0.1 * (x * x + y * y) + 1.95;
+            for (const w of WELLS_404) {
+              const dx = x - w.cx;
+              const dy = y - w.cy;
+              v -= w.amp * Math.exp(-(dx * dx + dy * dy) / w.s);
+            }
+            return v;
+          },
+          grad(x, y) {
+            let gx = 0.2 * x;
+            let gy = 0.2 * y;
+            for (const w of WELLS_404) {
+              const dx = x - w.cx;
+              const dy = y - w.cy;
+              const e = w.amp * Math.exp(-(dx * dx + dy * dy) / w.s);
+              gx += e * ((2 * dx) / w.s);
+              gy += e * ((2 * dy) / w.s);
+            }
+            return [gx, gy];
+          },
+          contourNorm(l) {
+            return Math.max(0, Math.min(1, (l - 0.15) / 2.55));
+          },
+        },
+        rosenbrock: {
+          name: 'Rosenbrock 香蕉峡谷',
+          globalMin: { x: 1 / 0.75, y: 0.4 / 0.85, label: 'global min (1,1) ★', radius: 0.28 },
+          localTrap: null,
+          demoPoint: [-1.45, 0.95],
+          loss(x, y) {
+            const u = x * 0.75;
+            const v = y * 0.85 + 0.6;
+            const d = v - u * u;
+            return 0.055 * ((1 - u) * (1 - u) + 12 * d * d);
+          },
+          grad(x, y) {
+            const u = x * 0.75;
+            const v = y * 0.85 + 0.6;
+            const d = v - u * u;
+            const dfdu = 0.055 * (-2 * (1 - u) - 48 * u * d);
+            const dfdv = 0.055 * (24 * d);
+            return [dfdu * 0.75, dfdv * 0.85];
+          },
+          contourNorm(l) {
+            return Math.max(0, Math.min(1, Math.log1p(l * 3.2) / 3.4));
+          },
+        },
+        saddle: {
+          name: 'Saddle 鞍点地形',
+          globalMin: { x: 1.48, y: 0, label: 'global min ★', radius: 0.3 },
+          localTrap: { x: -1.45, y: 0, label: 'local min (404)', radius: 0.35 },
+          extraLabel: { x: 0, y: 0, label: 'saddle (0,0)' },
+          demoPoint: [0.02, 0.95],
+          loss(x, y) {
+            const poly = 0.18 * (x * x * x * x - 4.2 * x * x) + 0.42 * y * y + 1.38;
+            const dx = x - 1.5;
+            const well = 0.4 * Math.exp(-(dx * dx + y * y) / 0.52);
+            return poly - well;
+          },
+          grad(x, y) {
+            const dx = x - 1.5;
+            const e = 0.4 * Math.exp(-(dx * dx + y * y) / 0.52);
+            const gx = 0.18 * (4 * x * x * x - 8.4 * x) + e * ((2 * dx) / 0.52);
+            const gy = 0.84 * y + e * ((2 * y) / 0.52);
+            return [gx, gy];
+          },
+          contourNorm(l) {
+            return Math.max(0, Math.min(1, (l - 0.18) / 2.6));
+          },
+        },
+        rastrigin: {
+          name: 'Rastrigin 蛋托迷宫',
+          globalMin: { x: 0.9, y: 0.2, label: 'global min ★', radius: 0.28 },
+          localTrap: null,
+          demoPoint: [-1.4, -0.8],
+          loss(x, y) {
+            const u = (x - 0.9) * 0.92;
+            const v = (y - 0.2) * 0.92;
+            return 0.22 * (u * u + v * v) + 0.42 * (2 - Math.cos(3.2 * u) - Math.cos(3.2 * v)) + 0.12;
+          },
+          grad(x, y) {
+            const u = (x - 0.9) * 0.92;
+            const v = (y - 0.2) * 0.92;
+            const gx = (0.44 * u + 0.42 * 3.2 * Math.sin(3.2 * u)) * 0.92;
+            const gy = (0.44 * v + 0.42 * 3.2 * Math.sin(3.2 * v)) * 0.92;
+            return [gx, gy];
+          },
+          contourNorm(l) {
+            return Math.max(0, Math.min(1, (l - 0.1) / 2.8));
+          },
+        },
+      };
+
+      const OPT_META = {
+        sgd: { label: 'SGD', light: '#7C3AED', dark: '#D8BAFF' },
+        momentum: { label: 'Mom', light: '#0D9488', dark: '#5EEAD4' },
+        adam: { label: 'Adam', light: '#D97706', dark: '#FBBF24' },
+        sgld: { label: 'SGLD', light: '#DB2777', dark: '#F472B6' },
+      };
+
+      let currentMapKey = '404';
+      let optimizerMode = 'race';
+      let lr = 0.06;
+      let noiseSigma = 0;
+      let showField = false;
+      let customWells = [];
+      let balls = [];
+      let ripples = [];
+      let waveId = 0;
+      let lastNanEggAt = 0;
+
+      // Slingshot drag state
+      let dragging = false;
+      let dragStartPx = null;
+      let dragCurrPx = null;
+
+      let width = 0;
+      let height = 0;
+      let lossW = 0;
+      let lossH = 0;
+      let dpr = Math.min(window.devicePixelRatio || 1, 2);
+      let bgCanvas = document.createElement('canvas');
+      let rafId = 0;
+
+      function currentMap() {
+        return LANDSCAPES[currentMapKey] || LANDSCAPES['404'];
+      }
+
       function lossAt(x, y) {
-        let v = 0.1 * (x * x + y * y) + 1.95;
-        for (const w of WELLS) {
+        let v = currentMap().loss(x, y);
+        for (const w of customWells) {
           const dx = x - w.cx;
           const dy = y - w.cy;
           v -= w.amp * Math.exp(-(dx * dx + dy * dy) / w.s);
@@ -117,9 +433,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
 
       function gradAt(x, y) {
-        let gx = 0.2 * x;
-        let gy = 0.2 * y;
-        for (const w of WELLS) {
+        let [gx, gy] = currentMap().grad(x, y);
+        for (const w of customWells) {
           const dx = x - w.cx;
           const dy = y - w.cy;
           const e = w.amp * Math.exp(-(dx * dx + dy * dy) / w.s);
@@ -128,14 +443,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         }
         return [gx, gy];
       }
-
-      let width = 0;
-      let height = 0;
-      let dpr = Math.min(window.devicePixelRatio || 1, 2);
-      let bgCanvas = document.createElement('canvas');
-      let optimizer = 'sgd';
-      let balls = [];
-      let rafId = 0;
 
       function toCanvas(x, y) {
         return [
@@ -151,6 +458,52 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         ];
       }
 
+      function setStatus(msg, tone = 'normal') {
+        if (!statusEl) return;
+        statusEl.textContent = msg;
+        statusEl.style.borderColor =
+          tone === 'win'
+            ? 'var(--accent)'
+            : tone === 'danger'
+              ? 'rgba(239, 68, 68, 0.55)'
+              : 'var(--border)';
+      }
+
+      function loadBestBadge() {
+        if (!bestBadge) return;
+        try {
+          const best = Number(localStorage.getItem(BEST_KEY) || '0');
+          if (best > 0) {
+            bestBadge.textContent = `最佳逃离 ${best} steps`;
+            bestBadge.classList.remove('hidden');
+            portalBtn?.classList.remove('hidden');
+            portalBtn?.classList.add('inline-flex');
+          }
+        } catch {}
+      }
+
+      function recordVictory(ball) {
+        const gm = currentMap().globalMin;
+        const [gx, gy] = toCanvas(gm.x, gm.y);
+        ripples.push({ x: gx, y: gy, r: 8, alpha: 0.95 });
+
+        let best = 0;
+        try {
+          best = Number(localStorage.getItem(BEST_KEY) || '0');
+          if (!best || ball.step < best) {
+            best = ball.step;
+            localStorage.setItem(BEST_KEY, String(best));
+          }
+        } catch {}
+
+        loadBestBadge();
+        const label = OPT_META[ball.opt]?.label || ball.opt;
+        setStatus(
+          `✓ 逃离 404 成功！${label} 用时 ${ball.step} steps${best ? ` · 历史最佳 ${best} steps` : ''}`,
+          'win'
+        );
+      }
+
       function renderContours() {
         bgCanvas.width = Math.max(1, Math.floor(width));
         bgCanvas.height = Math.max(1, Math.floor(height));
@@ -158,6 +511,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         if (!bctx) return;
 
         const isDark = document.documentElement.classList.contains('dark');
+        const map = currentMap();
         const img = bctx.createImageData(bgCanvas.width, bgCanvas.height);
         const data = img.data;
 
@@ -166,20 +520,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           for (let px = 0; px < bgCanvas.width; px++) {
             const x = X_MIN + (px / bgCanvas.width) * (X_MAX - X_MIN);
             const l = lossAt(x, y);
-            const norm = Math.max(0, Math.min(1, (l - 0.15) / 2.6));
-            // Subtle iso-loss contour lines
-            const band = Math.abs(((l * 6.5) % 1) - 0.5);
-            const isLine = band < 0.045;
+            const norm = map.contourNorm(l);
+            const band = Math.abs((((norm * 14) % 1) + 1) % 1 - 0.5);
+            const isLine = band < 0.042;
 
             let r, g, b;
             if (isDark) {
-              r = Math.round(24 + norm * 34 + (isLine ? 22 : 0));
-              g = Math.round(16 + norm * 22 + (isLine ? 16 : 0));
-              b = Math.round(38 + norm * 52 + (isLine ? 34 : 0));
+              r = Math.round(22 + norm * 36 + (isLine ? 20 : 0));
+              g = Math.round(15 + norm * 22 + (isLine ? 14 : 0));
+              b = Math.round(36 + norm * 56 + (isLine ? 32 : 0));
             } else {
-              r = Math.round(234 + norm * 19 - (isLine ? 18 : 0));
-              g = Math.round(224 + norm * 25 - (isLine ? 20 : 0));
-              b = Math.round(247 + norm * 7 - (isLine ? 12 : 0));
+              r = Math.round(234 + norm * 19 - (isLine ? 17 : 0));
+              g = Math.round(224 + norm * 25 - (isLine ? 19 : 0));
+              b = Math.round(247 + norm * 7 - (isLine ? 11 : 0));
             }
 
             const idx = (py * bgCanvas.width + px) * 4;
@@ -191,40 +544,326 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         }
         bctx.putImageData(img, 0, 0);
 
-        // Label minima softly
+        // Optional -∇L Vector Field Overlay
+        if (showField) {
+          const cols = Math.max(12, Math.floor(bgCanvas.width / 34));
+          const rows = Math.max(8, Math.floor(bgCanvas.height / 34));
+          bctx.strokeStyle = isDark ? 'rgba(216, 186, 255, 0.28)' : 'rgba(99, 65, 142, 0.25)';
+          bctx.fillStyle = bctx.strokeStyle;
+          bctx.lineWidth = 1;
+          for (let r = 0; r < rows; r++) {
+            const py = ((r + 0.5) / rows) * bgCanvas.height;
+            for (let c = 0; c < cols; c++) {
+              const px = ((c + 0.5) / cols) * bgCanvas.width;
+              const [dx, dy] = toDomain(px, py);
+              const [gx, gy] = gradAt(dx, dy);
+              const mag = Math.hypot(gx, gy);
+              if (mag < 0.03) continue;
+              const len = Math.min(13, 3.5 + Math.log1p(mag * 2.2) * 5.2);
+              const ux = -gx / mag;
+              const uy = gy / mag; // flip Y for canvas
+              const ex = px + ux * len;
+              const ey = py + uy * len;
+              bctx.beginPath();
+              bctx.moveTo(px, py);
+              bctx.lineTo(ex, ey);
+              bctx.stroke();
+
+              // tiny arrowhead
+              const ah = 3;
+              const ax1 = ex - ux * ah - uy * ah * 0.55;
+              const ay1 = ey - uy * ah + ux * ah * 0.55;
+              const ax2 = ex - ux * ah + uy * ah * 0.55;
+              const ay2 = ey - uy * ah - ux * ah * 0.55;
+              bctx.beginPath();
+              bctx.moveTo(ex, ey);
+              bctx.lineTo(ax1, ay1);
+              bctx.lineTo(ax2, ay2);
+              bctx.closePath();
+              bctx.fill();
+            }
+          }
+        }
+
+        // Markers & Labels
         bctx.font = '600 10.5px JetBrains Mono, monospace';
         bctx.textAlign = 'center';
-        bctx.fillStyle = isDark ? 'rgba(216, 186, 255, 0.72)' : 'rgba(99, 65, 142, 0.72)';
-        const [gx, gy] = toCanvas(1.4, 0.25);
-        bctx.fillText('global min', gx, gy + 18);
-        const [lx, ly] = toCanvas(-1.5, -0.35);
-        bctx.fillText('local min (404)', lx, ly + 18);
+
+        const gm = map.globalMin;
+        const [gx, gy] = toCanvas(gm.x, gm.y);
+        bctx.beginPath();
+        bctx.arc(gx, gy, 11, 0, Math.PI * 2);
+        bctx.strokeStyle = isDark ? 'rgba(216, 186, 255, 0.55)' : 'rgba(99, 65, 142, 0.45)';
+        bctx.setLineDash([3, 3]);
+        bctx.lineWidth = 1.25;
+        bctx.stroke();
+        bctx.setLineDash([]);
+        bctx.fillStyle = isDark ? 'rgba(216, 186, 255, 0.85)' : 'rgba(99, 65, 142, 0.88)';
+        bctx.fillText(gm.label, gx, gy + 22);
+
+        if (map.localTrap) {
+          const [lx, ly] = toCanvas(map.localTrap.x, map.localTrap.y);
+          bctx.fillStyle = isDark ? 'rgba(216, 186, 255, 0.52)' : 'rgba(99, 65, 142, 0.58)';
+          bctx.fillText(map.localTrap.label, lx, ly + 18);
+        }
+
+        if (map.extraLabel) {
+          const [sx, sy] = toCanvas(map.extraLabel.x, map.extraLabel.y);
+          bctx.fillStyle = isDark ? 'rgba(216, 186, 255, 0.48)' : 'rgba(99, 65, 142, 0.52)';
+          bctx.fillText(map.extraLabel.label, sx, sy + 16);
+        }
+
+        // Label user-dug custom pits
+        customWells.forEach((w, idx) => {
+          const [wx, wy] = toCanvas(w.cx, w.cy);
+          bctx.fillStyle = isDark ? 'rgba(244, 114, 182, 0.72)' : 'rgba(190, 24, 93, 0.62)';
+          bctx.fillText(`pit #${idx + 1}`, wx, wy + 16);
+        });
       }
 
       function resize() {
         const rect = canvas.getBoundingClientRect();
         width = Math.max(280, Math.floor(rect.width));
-        height = Math.max(240, Math.floor(rect.height));
+        height = Math.max(260, Math.floor(rect.height));
         dpr = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.floor(width * dpr);
         canvas.height = Math.floor(height * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const lrect = lossCanvas.getBoundingClientRect();
+        lossW = Math.max(240, Math.floor(lrect.width));
+        lossH = Math.max(58, Math.floor(lrect.height));
+        lossCanvas.width = Math.floor(lossW * dpr);
+        lossCanvas.height = Math.floor(lossH * dpr);
+        lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
         renderContours();
       }
 
-      function dropBall(x, y) {
-        const hue = optimizer === 'momentum' ? 'momentum' : 'sgd';
-        balls.push({
-          x,
-          y,
-          vx: 0,
-          vy: 0,
-          opt: hue,
-          step: 0,
-          trail: [[x, y]],
-          done: false,
-        });
-        if (balls.length > 8) balls.shift();
+      function spawnWave(x, y, vx0 = 0, vy0 = 0, isDemo = false) {
+        waveId += 1;
+        const opts = optimizerMode === 'race' ? ['sgd', 'momentum', 'adam', 'sgld'] : [optimizerMode];
+        const l0 = lossAt(x, y);
+
+        // Keep at most 12 balls (3 waves in race mode) so canvas stays readable
+        for (const opt of opts) {
+          balls.push({
+            wave: waveId,
+            isDemo,
+            x,
+            y,
+            vx: vx0,
+            vy: vy0,
+            // Separate slingshot inertia for non-momentum optimizers
+            kickX: opt === 'momentum' ? 0 : vx0,
+            kickY: opt === 'momentum' ? 0 : vy0,
+            mx: 0,
+            my: 0,
+            v2x: 0,
+            v2y: 0,
+            opt,
+            step: 0,
+            trail: [[x, y]],
+            losses: [l0],
+            done: false,
+            won: false,
+            diverged: false,
+          });
+        }
+        while (balls.length > 12) balls.shift();
+
+        const isLaunch = Math.hypot(vx0, vy0) > 0.02;
+        if (optimizerMode === 'race') {
+          setStatus(isLaunch ? '弹射同点竞速中：SGD / Mom / Adam / SGLD…' : '同点竞速中：SGD / Mom / Adam / SGLD…');
+        } else {
+          setStatus(`${OPT_META[optimizerMode].label} 下降中（lr=${lr.toFixed(2)}）…`);
+        }
+      }
+
+      function stepBall(ball) {
+        if (ball.done || ball.step >= 280) {
+          ball.done = true;
+          return;
+        }
+
+        let [gx, gy] = gradAt(ball.x, ball.y);
+        if (noiseSigma > 0) {
+          gx += noiseSigma * randn();
+          gy += noiseSigma * randn();
+        }
+
+        const t = ball.step + 1;
+        if (ball.opt === 'momentum') {
+          const beta = 0.88;
+          ball.vx = beta * ball.vx - lr * 0.72 * gx;
+          ball.vy = beta * ball.vy - lr * 0.72 * gy;
+          ball.x += ball.vx;
+          ball.y += ball.vy;
+        } else if (ball.opt === 'adam') {
+          const b1 = 0.9;
+          const b2 = 0.999;
+          const eps = 1e-8;
+          ball.mx = b1 * ball.mx + (1 - b1) * gx;
+          ball.my = b1 * ball.my + (1 - b1) * gy;
+          ball.v2x = b2 * ball.v2x + (1 - b2) * gx * gx;
+          ball.v2y = b2 * ball.v2y + (1 - b2) * gy * gy;
+          const mhx = ball.mx / (1 - Math.pow(b1, t));
+          const mhy = ball.my / (1 - Math.pow(b1, t));
+          const vhx = ball.v2x / (1 - Math.pow(b2, t));
+          const vhy = ball.v2y / (1 - Math.pow(b2, t));
+          const stepScale = lr * 1.15;
+          ball.x -= (stepScale * mhx) / (Math.sqrt(vhx) + eps);
+          ball.y -= (stepScale * mhy) / (Math.sqrt(vhy) + eps);
+        } else if (ball.opt === 'sgld') {
+          const cool = 1 / (1 + t * 0.012);
+          const nScale = Math.max(0.16, noiseSigma + 0.14) * Math.sqrt(lr) * cool;
+          ball.x -= lr * gx - nScale * randn();
+          ball.y -= lr * gy - nScale * randn();
+        } else {
+          // Vanilla SGD
+          ball.x -= lr * gx;
+          ball.y -= lr * gy;
+        }
+
+        // Apply decaying slingshot kick for non-momentum optimizers
+        if (ball.opt !== 'momentum' && (Math.abs(ball.kickX) > 1e-4 || Math.abs(ball.kickY) > 1e-4)) {
+          ball.x += ball.kickX;
+          ball.y += ball.kickY;
+          ball.kickX *= 0.87;
+          ball.kickY *= 0.87;
+        }
+
+        ball.step = t;
+
+        // Check divergence (lr too high -> flies out or NaN!)
+        const curLoss = lossAt(ball.x, ball.y);
+        if (
+          !Number.isFinite(ball.x) ||
+          !Number.isFinite(ball.y) ||
+          !Number.isFinite(curLoss) ||
+          Math.abs(ball.x) > 5.8 ||
+          Math.abs(ball.y) > 4.2 ||
+          curLoss > 25
+        ) {
+          ball.diverged = true;
+          ball.done = true;
+          ball.x = Math.max(X_MIN + 0.08, Math.min(X_MAX - 0.08, Number.isFinite(ball.x) ? ball.x : 0));
+          ball.y = Math.max(Y_MIN + 0.08, Math.min(Y_MAX - 0.08, Number.isFinite(ball.y) ? ball.y : 0));
+          ball.losses.push(NaN);
+          setStatus(`💥 梯度爆炸：${OPT_META[ball.opt].label} 在第 ${ball.step} 步发散（lr=${lr.toFixed(2)} -> NaN）`, 'danger');
+          const now = Date.now();
+          if (now - lastNanEggAt > 3500) {
+            lastNanEggAt = now;
+            window.dispatchEvent(new CustomEvent('anka-trigger-nan', { detail: { lr: lr.toFixed(2) } }));
+          }
+          return;
+        }
+
+        ball.x = Math.max(X_MIN + 0.05, Math.min(X_MAX - 0.05, ball.x));
+        ball.y = Math.max(Y_MIN + 0.05, Math.min(Y_MAX - 0.05, ball.y));
+        ball.trail.push([ball.x, ball.y]);
+        ball.losses.push(curLoss);
+
+        const gm = currentMap().globalMin;
+        const distGlobal = Math.hypot(ball.x - gm.x, ball.y - gm.y);
+        if (!ball.won && distGlobal < gm.radius) {
+          ball.won = true;
+          if (!ball.isDemo) {
+            recordVictory(ball);
+          } else {
+            const [gx, gy] = toCanvas(gm.x, gm.y);
+            ripples.push({ x: gx, y: gy, r: 8, alpha: 0.75 });
+          }
+        }
+
+        // Stopping check (gentle settling)
+        const speed = Math.hypot(ball.vx, ball.vy) + Math.hypot(ball.kickX, ball.kickY);
+        const [cleanGx, cleanGy] = gradAt(ball.x, ball.y);
+        if (ball.opt !== 'sgld' && noiseSigma === 0 && Math.hypot(cleanGx, cleanGy) < 0.018 && speed < 0.006 && ball.step > 12) {
+          ball.done = true;
+          const trap = currentMap().localTrap;
+          if (!ball.won && trap && Math.hypot(ball.x - trap.x, ball.y - trap.y) < trap.radius) {
+            const latestWaveBalls = balls.filter((b) => b.wave === waveId);
+            if (!latestWaveBalls.some((b) => b.won)) {
+              setStatus('卡死在 404 局部坑里了 · 试试调大噪声 σ、同点竞速，或按住拖拽弹射！');
+            }
+          }
+        }
+      }
+
+      function drawLossSparkline() {
+        lctx.clearRect(0, 0, lossW, lossH);
+        const isDark = document.documentElement.classList.contains('dark');
+        const latest = balls.filter((b) => b.wave === waveId);
+        if (!latest.length) return;
+
+        const padX = 6;
+        const padY = 8;
+        const innerW = lossW - padX * 2;
+        const innerH = lossH - padY * 2;
+
+        // Compute Y scale across latest wave
+        let maxL = 0.8;
+        let minL = 0;
+        let maxSteps = 30;
+        for (const b of latest) {
+          maxSteps = Math.max(maxSteps, b.losses.length);
+          for (const v of b.losses) {
+            if (Number.isFinite(v)) {
+              if (v > maxL) maxL = v;
+            }
+          }
+        }
+        maxL = Math.min(maxL, 5.0);
+
+        // Subtle baseline target line for global min loss
+        const gm = currentMap().globalMin;
+        const targetL = lossAt(gm.x, gm.y);
+        if (targetL >= minL && targetL <= maxL) {
+          const ty = padY + innerH * (1 - (targetL - minL) / Math.max(0.01, maxL - minL));
+          lctx.strokeStyle = isDark ? 'rgba(216, 186, 255, 0.22)' : 'rgba(99, 65, 142, 0.22)';
+          lctx.setLineDash([4, 4]);
+          lctx.lineWidth = 1;
+          lctx.beginPath();
+          lctx.moveTo(padX, ty);
+          lctx.lineTo(lossW - padX, ty);
+          lctx.stroke();
+          lctx.setLineDash([]);
+        }
+
+        // Draw each curve
+        const legendParts = [];
+        for (const b of latest) {
+          const meta = OPT_META[b.opt];
+          const color = isDark ? meta.dark : meta.light;
+          const lastVal = b.losses[b.losses.length - 1];
+          legendParts.push(
+            `${meta.label}: ${b.diverged || !Number.isFinite(lastVal) ? 'NaN' : lastVal.toFixed(3)}${b.won ? '★' : ''}`
+          );
+
+          if (b.losses.length < 2) continue;
+          lctx.beginPath();
+          let started = false;
+          b.losses.forEach((v, idx) => {
+            if (!Number.isFinite(v)) return;
+            const px = padX + (idx / Math.max(1, maxSteps - 1)) * innerW;
+            const clamped = Math.max(minL, Math.min(maxL, v));
+            const py = padY + innerH * (1 - (clamped - minL) / Math.max(0.01, maxL - minL));
+            if (!started) {
+              lctx.moveTo(px, py);
+              started = true;
+            } else {
+              lctx.lineTo(px, py);
+            }
+          });
+          lctx.strokeStyle = b.diverged ? '#EF4444' : color;
+          lctx.lineWidth = 1.75;
+          lctx.stroke();
+        }
+
+        if (readout) {
+          readout.textContent = legendParts.join(' · ');
+        }
       }
 
       function draw() {
@@ -232,34 +871,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         ctx.drawImage(bgCanvas, 0, 0, width, height);
 
         const isDark = document.documentElement.classList.contains('dark');
-        const primary = isDark ? '#D8BAFF' : '#63418E';
-        const momentumColor = isDark ? '#5EEAD4' : '#0D9488';
 
-        for (const ball of balls) {
-          if (!ball.done && ball.step < 260) {
-            const [gx, gy] = gradAt(ball.x, ball.y);
-            if (ball.opt === 'momentum') {
-              const lr = 0.045;
-              const beta = 0.88;
-              ball.vx = beta * ball.vx - lr * gx;
-              ball.vy = beta * ball.vy - lr * gy;
-              ball.x += ball.vx;
-              ball.y += ball.vy;
-            } else {
-              const lr = 0.065;
-              ball.x -= lr * gx;
-              ball.y -= lr * gy;
-            }
-            ball.x = Math.max(X_MIN + 0.05, Math.min(X_MAX - 0.05, ball.x));
-            ball.y = Math.max(Y_MIN + 0.05, Math.min(Y_MAX - 0.05, ball.y));
-            ball.step += 1;
-            ball.trail.push([ball.x, ball.y]);
-            if (Math.hypot(gx, gy) < 0.015 && Math.hypot(ball.vx, ball.vy) < 0.004) {
-              ball.done = true;
-            }
+        // Celebration ripples
+        for (let i = ripples.length - 1; i >= 0; i--) {
+          const rp = ripples[i];
+          rp.r += 1.65;
+          rp.alpha -= 0.024;
+          if (rp.alpha <= 0) {
+            ripples.splice(i, 1);
+            continue;
           }
+          ctx.beginPath();
+          ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+          ctx.strokeStyle = isDark
+            ? `rgba(216, 186, 255, ${rp.alpha.toFixed(2)})`
+            : `rgba(99, 65, 142, ${rp.alpha.toFixed(2)})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
 
-          const color = ball.opt === 'momentum' ? momentumColor : primary;
+        // Update & render all balls
+        for (const ball of balls) {
+          stepBall(ball);
+
+          const meta = OPT_META[ball.opt];
+          const color = ball.diverged ? '#EF4444' : isDark ? meta.dark : meta.light;
+          const isOldWave = ball.wave !== waveId;
 
           // Trail
           if (ball.trail.length > 1) {
@@ -270,35 +907,75 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               else ctx.lineTo(px, py);
             });
             ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.globalAlpha = 0.78;
+            ctx.lineWidth = isOldWave ? 1.4 : 2.1;
+            ctx.globalAlpha = isOldWave ? 0.35 : 0.85;
             ctx.stroke();
             ctx.globalAlpha = 1;
           }
 
-          // Ball
+          // Ball dot
           const [bx, by] = toCanvas(ball.x, ball.y);
           ctx.beginPath();
-          ctx.arc(bx, by, 5.5, 0, Math.PI * 2);
+          ctx.arc(bx, by, isOldWave ? 4 : 5.5, 0, Math.PI * 2);
           ctx.fillStyle = color;
           ctx.fill();
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 1.8;
           ctx.strokeStyle = isDark ? '#110D18' : '#FFFFFF';
           ctx.stroke();
+
+          if (ball.diverged && !isOldWave) {
+            ctx.font = '700 10px JetBrains Mono, monospace';
+            ctx.fillStyle = '#EF4444';
+            ctx.textAlign = 'center';
+            ctx.fillText('NaN!', bx, by - 10);
+          }
         }
 
-        const active = balls[balls.length - 1];
-        if (active && readout) {
-          readout.textContent = `loss: ${lossAt(active.x, active.y).toFixed(4)} · step: ${active.step}`;
+        // Slingshot aim vector overlay while dragging
+        if (dragging && dragStartPx && dragCurrPx) {
+          const dx = dragCurrPx[0] - dragStartPx[0];
+          const dy = dragCurrPx[1] - dragStartPx[1];
+          const dist = Math.hypot(dx, dy);
+          ctx.beginPath();
+          ctx.arc(dragStartPx[0], dragStartPx[1], 5, 0, Math.PI * 2);
+          ctx.fillStyle = isDark ? '#D8BAFF' : '#63418E';
+          ctx.fill();
+
+          if (dist > 8) {
+            ctx.beginPath();
+            ctx.moveTo(dragStartPx[0], dragStartPx[1]);
+            ctx.lineTo(dragCurrPx[0], dragCurrPx[1]);
+            ctx.strokeStyle = isDark ? '#D8BAFF' : '#63418E';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const ux = dx / dist;
+            const uy = dy / dist;
+            const ah = 8;
+            ctx.beginPath();
+            ctx.moveTo(dragCurrPx[0], dragCurrPx[1]);
+            ctx.lineTo(dragCurrPx[0] - ux * ah - uy * ah * 0.5, dragCurrPx[1] - uy * ah + ux * ah * 0.5);
+            ctx.lineTo(dragCurrPx[0] - ux * ah + uy * ah * 0.5, dragCurrPx[1] - uy * ah - ux * ah * 0.5);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.font = '600 10px JetBrains Mono, monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText(`v₀ ${(Math.min(dist, 160) / 160).toFixed(2)}`, dragCurrPx[0] + 8, dragCurrPx[1] - 6);
+          }
         }
 
+        drawLossSparkline();
         rafId = window.requestAnimationFrame(draw);
       }
 
+      // Bind Optimizer Switcher
       const optBtns = Array.from(document.querySelectorAll('[data-gd-opt]'));
       optBtns.forEach((btn) => {
         btn.addEventListener('click', () => {
-          optimizer = btn.getAttribute('data-gd-opt') || 'sgd';
+          optimizerMode = btn.getAttribute('data-gd-opt') || 'race';
           optBtns.forEach((b) => {
             const on = b === btn;
             b.classList.toggle('bg-[var(--surface-soft)]', on);
@@ -309,31 +986,155 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         });
       });
 
-      clearBtn?.addEventListener('click', () => {
-        balls = [];
-        if (readout) readout.textContent = 'loss: — · step: 0';
+      // Bind Landscape Switcher
+      const mapBtns = Array.from(document.querySelectorAll('[data-gd-map]'));
+      mapBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const nextKey = btn.getAttribute('data-gd-map') || '404';
+          if (nextKey === currentMapKey) return;
+          currentMapKey = nextKey;
+          customWells = [];
+          resetPitsBtn?.classList.add('hidden');
+          balls = [];
+          mapBtns.forEach((b) => {
+            const on = b === btn;
+            b.classList.toggle('bg-[var(--surface-soft)]', on);
+            b.classList.toggle('text-[var(--accent)]', on);
+            b.classList.toggle('font-semibold', on);
+            b.classList.toggle('text-[var(--text-muted)]', !on);
+          });
+          renderContours();
+          const [dx, dy] = currentMap().demoPoint;
+          spawnWave(dx, dy, 0, 0, true);
+        });
       });
 
-      const onCanvasClick = (e) => {
+      // Sliders
+      lrInput?.addEventListener('input', () => {
+        lr = parseFloat(lrInput.value) || 0.06;
+        if (lrVal) lrVal.textContent = lr.toFixed(2);
+      });
+      noiseInput?.addEventListener('input', () => {
+        noiseSigma = parseFloat(noiseInput.value) || 0;
+        if (noiseVal) noiseVal.textContent = noiseSigma.toFixed(2);
+      });
+
+      // Vector Field toggle
+      fieldBtn?.addEventListener('click', () => {
+        showField = !showField;
+        fieldBtn.classList.toggle('bg-[var(--surface-soft)]', showField);
+        fieldBtn.classList.toggle('text-[var(--accent)]', showField);
+        fieldBtn.classList.toggle('border-[var(--accent)]', showField);
+        renderContours();
+      });
+
+      // Clear & Reset Pits
+      clearBtn?.addEventListener('click', () => {
+        balls = [];
+        if (readout) readout.textContent = '已清空 · 点击画布重新投放';
+        setStatus('点击或按住拖拽，投放新的参数…');
+      });
+
+      resetPitsBtn?.addEventListener('click', () => {
+        customWells = [];
+        resetPitsBtn.classList.add('hidden');
+        renderContours();
+        setStatus('已填平所有自定义陷阱坑');
+      });
+
+      portalBtn?.addEventListener('click', () => {
+        if (!paperList.length) {
+          window.location.href = '/papers';
+          return;
+        }
+        const pick = paperList[Math.floor(Math.random() * paperList.length)];
+        window.location.href = pick.url;
+      });
+
+      // Dig a pit helper
+      function digPitAtClient(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
-        const [x, y] = toDomain(e.clientX - rect.left, e.clientY - rect.top);
-        dropBall(x, y);
+        const [x, y] = toDomain(clientX - rect.left, clientY - rect.top);
+        customWells.push({ cx: x, cy: y, amp: 1.05, s: 0.34 });
+        if (customWells.length > 8) customWells.shift();
+        resetPitsBtn?.classList.remove('hidden');
+        renderContours();
+        setStatus(`在 (${x.toFixed(1)}, ${y.toFixed(1)}) 现挖了一个新坑，观察小球改道！`);
+      }
+
+      // Pointer interactions: Click / Slingshot Drag / Shift+Click or Right-Click dig pit
+      const onPointerDown = (e) => {
+        if (e.button === 2 || e.shiftKey) {
+          e.preventDefault();
+          digPitAtClient(e.clientX, e.clientY);
+          return;
+        }
+        if (e.button !== 0) return;
+        const rect = canvas.getBoundingClientRect();
+        dragging = true;
+        dragStartPx = [e.clientX - rect.left, e.clientY - rect.top];
+        dragCurrPx = [...dragStartPx];
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch {}
+      };
+
+      const onPointerMove = (e) => {
+        if (!dragging) return;
+        const rect = canvas.getBoundingClientRect();
+        dragCurrPx = [e.clientX - rect.left, e.clientY - rect.top];
+      };
+
+      const onPointerUp = (e) => {
+        if (!dragging || !dragStartPx || !dragCurrPx) return;
+        dragging = false;
+        const [x, y] = toDomain(dragStartPx[0], dragStartPx[1]);
+        const dxPx = dragCurrPx[0] - dragStartPx[0];
+        const dyPx = dragCurrPx[1] - dragStartPx[1];
+        const dist = Math.hypot(dxPx, dyPx);
+
+        let vx0 = 0;
+        let vy0 = 0;
+        if (dist > 8) {
+          const clamped = Math.min(dist, 160);
+          const power = (clamped / 160) * 0.28;
+          vx0 = (dxPx / dist) * power;
+          vy0 = -(dyPx / dist) * power; // canvas Y is inverted vs domain Y
+        }
+
+        dragStartPx = null;
+        dragCurrPx = null;
+        spawnWave(x, y, vx0, vy0);
+      };
+
+      const onContextMenu = (e) => {
+        e.preventDefault();
       };
 
       const onThemeChange = () => renderContours();
 
-      canvas.addEventListener('click', onCanvasClick);
+      canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('pointermove', onPointerMove);
+      canvas.addEventListener('pointerup', onPointerUp);
+      canvas.addEventListener('pointercancel', onPointerUp);
+      canvas.addEventListener('contextmenu', onContextMenu);
       window.addEventListener('resize', resize, { passive: true });
       window.addEventListener('anka-theme-change', onThemeChange);
 
+      loadBestBadge();
       resize();
-      // Drop one subtle demo ball near the ridge so it rolls alive immediately
-      dropBall(-0.45, -0.95);
+      // Launch an initial live 4-optimizer race so the page feels immediately alive!
+      const [demoX, demoY] = currentMap().demoPoint;
+      spawnWave(demoX, demoY, 0, 0, true);
       rafId = window.requestAnimationFrame(draw);
 
       stopGd = () => {
         window.cancelAnimationFrame(rafId);
-        canvas.removeEventListener('click', onCanvasClick);
+        canvas.removeEventListener('pointerdown', onPointerDown);
+        canvas.removeEventListener('pointermove', onPointerMove);
+        canvas.removeEventListener('pointerup', onPointerUp);
+        canvas.removeEventListener('pointercancel', onPointerUp);
+        canvas.removeEventListener('contextmenu', onContextMenu);
         window.removeEventListener('resize', resize);
         window.removeEventListener('anka-theme-change', onThemeChange);
         delete canvas.dataset.running;

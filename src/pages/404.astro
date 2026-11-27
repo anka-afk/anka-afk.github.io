@@ -91,6 +91,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       canvas.dataset.running = '1';
+      window.__ankaEggs?.unlock('404', '掉进了局部极小值（/404 梯度下降）', { onlyOnNew: true });
 
       // Domain [-3, 3] x [-2, 2]
       const X_MIN = -3;

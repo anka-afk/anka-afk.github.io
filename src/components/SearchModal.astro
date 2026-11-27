@@ -146,12 +146,56 @@ import { SITE } from '../site.config';
           },
         },
         {
+          id: 'cmd-arxiv',
+          title: '> arxiv · 切换 arXiv 预印本论文皮肤',
+          summary: '在论文页切换经典 LaTeX 纸张排版与边栏水印（或直接打开示例论文）',
+          badge: 'FUN',
+          keywords: 'arxiv latex paper 预印本 排版 皮肤 彩蛋',
+          run: () => {
+            closeModal();
+            window.dispatchEvent(new CustomEvent('anka-toggle-arxiv'));
+          },
+        },
+        {
+          id: 'cmd-sh',
+          title: '> sh · 进入隐藏终端 /cli',
+          summary: '打开 ankaanka.org 交互式紫色终端（支持 papers / train / cat .eggs）',
+          badge: 'FUN',
+          keywords: 'sh cli terminal shell 终端 命令行 彩蛋',
+          run: () => navigateTo('/cli', false),
+        },
+        {
+          id: 'cmd-nan',
+          title: '> nan · 把学习率调太大（lr=1e2）',
+          summary: '体验梯度爆炸与自动回滚 checkpoint 的经典炼丹事故',
+          badge: 'FUN',
+          keywords: 'nan lr explode loss 爆炸 学习率 彩蛋',
+          run: () => {
+            closeModal();
+            window.dispatchEvent(new CustomEvent('anka-trigger-nan', { detail: { lr: '1e2' } }));
+          },
+        },
+        {
           id: 'cmd-404',
           title: '> 404 · 玩梯度下降地形',
           summary: '前往 404 页面体验二维非凸损失曲面 SGD / Momentum 小玩具',
           badge: 'FUN',
           keywords: '404 gd sgd momentum 梯度下降 玩具 loss',
           run: () => navigateTo('/404', false),
+        },
+        {
+          id: 'cmd-eggs',
+          title: '> eggs · 查看当前彩蛋收集进度',
+          summary: '查看本地已触发的隐藏彩蛋数量（共 7 个）',
+          badge: 'FUN',
+          keywords: 'eggs easter 彩蛋 进度 成就',
+          run: () => {
+            closeModal();
+            const api = window.__ankaEggs;
+            if (!api) return;
+            const n = api.getUnlocked().length;
+            api.showToast(`当前已收集 ${n}/${api.total} 个彩蛋 · 输入 /cli 的 cat .eggs 可看清单`, 3000);
+          },
         },
         {
           id: 'cmd-rss',
@@ -238,6 +282,32 @@ import { SITE } from '../site.config';
       // Command palette mode when prefixed with '>'
       if (q.startsWith('>')) {
         const sub = q.slice(1).trim().toLowerCase();
+        const lrMatch = sub.match(/^lr\s+([0-9.e+-]+)$/i);
+        if (lrMatch) {
+          const lrVal = lrMatch[1];
+          renderPalette(
+            [
+              {
+                title: `> lr ${lrVal} · 使用学习率 ${lrVal} 试跑一步`,
+                summary:
+                  Number(lrVal) >= 0.05
+                    ? '警告：这个学习率大概率会导致梯度爆炸（loss -> NaN）'
+                    : '学习率看起来比较稳健，但仍然可以试着调大到 1e2',
+                badge: 'FUN',
+                run: () => {
+                  closeModal();
+                  if (Number(lrVal) >= 0.05 || !Number.isFinite(Number(lrVal))) {
+                    window.dispatchEvent(new CustomEvent('anka-trigger-nan', { detail: { lr: lrVal } }));
+                  } else {
+                    window.__ankaEggs?.showToast(`lr = ${lrVal} · 梯度很稳，loss 平滑下降中（试试 > lr 1e2）`, 2600);
+                  }
+                },
+              },
+            ],
+            ''
+          );
+          return;
+        }
         const filtered = !sub
           ? commands
           : commands.filter((c) => `${c.title} ${c.keywords}`.toLowerCase().includes(sub));

@@ -1,0 +1,282 @@
+---
+// Unified Easter Egg Engine:
+// - LocalStorage egg collection tracker (7 collectible eggs)
+// - Background tab title whisper (visibilitychange)
+// - Midnight Alchemist mode (00:00–05:00 local time)
+// - Loss NaN explosion effect (> nan / > lr 1e2)
+// - arXiv preprint skin toggle (> arxiv / double-click paper kicker)
+---
+
+<!-- Global subtle Easter egg toast -->
+<div id="anka-egg-toast" class="anka-toast" role="status" aria-live="polite">
+  <span class="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]"></span>
+  <span id="anka-egg-toast-text"></span>
+</div>
+
+<!-- arXiv preprint mode chrome (only visible when html.arxiv-mode is active) -->
+<div class="arxiv-watermark" aria-hidden="true">arXiv:2026.anka [cs.LG]</div>
+<button
+  type="button"
+  id="arxiv-exit-pill"
+  class="arxiv-exit-pill cursor-pointer"
+  title="退出 arXiv 预印本排版（Esc）"
+>
+  退出 arXiv 排版 · Esc
+</button>
+
+<script is:inline>
+  (() => {
+    if (window.__ankaEggsInit) return;
+    window.__ankaEggsInit = true;
+
+    const STORAGE_KEY = 'anka-eggs-v1';
+    const EGG_CATALOG = [
+      { id: 'temp', label: '高温采样（连点头像 5 次）' },
+      { id: 'arxiv', label: 'arXiv 预印本排版皮肤' },
+      { id: 'nan', label: '学习率设太大，Loss 炸了' },
+      { id: 'night', label: '深夜炼丹模式（00:00–05:00）' },
+      { id: 'cli', label: '隐藏终端 /cli' },
+      { id: '404', label: '局部极小值 /404 梯度下降' },
+      { id: 'console', label: 'F12 控制台 anka()' },
+    ];
+    const TOTAL = EGG_CATALOG.length;
+
+    let toastTimer = null;
+    let tabTimer = null;
+    let savedTitle = '';
+    let nanTimer = null;
+
+    function getUnlocked() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.filter((id) => EGG_CATALOG.some((e) => e.id === id)) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveUnlocked(list) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      } catch {}
+    }
+
+    function showToast(text, duration = 2600) {
+      const toast = document.getElementById('anka-egg-toast');
+      const label = document.getElementById('anka-egg-toast-text');
+      if (!toast || !label) return;
+      label.textContent = text;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    function updateProgressBadges() {
+      const count = getUnlocked().length;
+      document.querySelectorAll('[data-egg-progress]').forEach((el) => {
+        el.textContent = `已发现 ${count}/${TOTAL}`;
+      });
+    }
+
+    function unlock(id, message, options = {}) {
+      const unlocked = getUnlocked();
+      const isNew = !unlocked.includes(id);
+      if (isNew && EGG_CATALOG.some((e) => e.id === id)) {
+        unlocked.push(id);
+        saveUnlocked(unlocked);
+      }
+      updateProgressBadges();
+
+      if (options.silent) return { isNew, count: unlocked.length, total: TOTAL };
+      if (options.onlyOnNew && !isNew) return { isNew, count: unlocked.length, total: TOTAL };
+
+      const suffix =
+        unlocked.length === TOTAL
+          ? ` · 全彩蛋收集 ${TOTAL}/${TOTAL} ✦`
+          : ` · 彩蛋 ${unlocked.length}/${TOTAL}`;
+      showToast(`${message}${suffix}`, options.duration || 2800);
+      return { isNew, count: unlocked.length, total: TOTAL };
+    }
+
+    // 1. Loss NaN explosion effect
+    function triggerNan(lrLabel = '1e2') {
+      const root = document.documentElement;
+      root.classList.remove('loss-exploding');
+      void root.offsetWidth;
+      root.classList.add('loss-exploding');
+      clearTimeout(nanTimer);
+      nanTimer = setTimeout(() => {
+        root.classList.remove('loss-exploding');
+      }, 1450);
+
+      unlock(
+        'nan',
+        `RuntimeError: loss is NaN (lr=${lrLabel}, grad_norm=inf) · 已自动回滚至上一 checkpoint`,
+        { duration: 3600 }
+      );
+    }
+
+    // 2. arXiv Preprint Skin (for paper reading pages)
+    function isPaperPage() {
+      return /^\/papers\/[^/]+\/?$/.test(window.location.pathname);
+    }
+
+    function setArxivMode(enabled, notify = true) {
+      const root = document.documentElement;
+      root.classList.toggle('arxiv-mode', enabled);
+      if (enabled) {
+        if (notify) {
+          unlock('arxiv', '已切换至 arXiv 预印本排版（按 Esc 或再点一次退出）', { duration: 3000 });
+        } else {
+          unlock('arxiv', '', { silent: true });
+        }
+      } else if (notify) {
+        showToast('已恢复默认紫色阅读主题', 1800);
+      }
+    }
+
+    function toggleArxiv() {
+      if (!isPaperPage()) {
+        window.location.href = '/papers/01-dpo?mode=arxiv';
+        return;
+      }
+      const next = !document.documentElement.classList.contains('arxiv-mode');
+      setArxivMode(next, true);
+    }
+
+    // 3. Midnight Alchemist mode (00:00–05:00 local time)
+    function applyMidnightMode() {
+      const now = new Date();
+      const hour = now.getHours();
+      const slot = document.getElementById('anka-night-note');
+      if (hour >= 0 && hour < 5) {
+        const hh = String(hour).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const whispers = [
+          '显存还稳吗，早点睡',
+          'GPU 还在跑，注意休息',
+          'loss 明天再调，先去睡觉',
+          '深夜推导慢一点，别漏了 Z(x)',
+        ];
+        const msg = whispers[(hour + now.getDate()) % whispers.length];
+        if (slot) {
+          slot.textContent = `· ${hh}:${mm} · ${msg}`;
+          slot.classList.remove('hidden');
+        }
+        unlock('night', `深夜炼丹模式（${hh}:${mm} · ${msg}）`, { onlyOnNew: true, duration: 3200 });
+      } else if (slot) {
+        slot.textContent = '';
+        slot.classList.add('hidden');
+      }
+    }
+
+    // 4. Background Tab Title Whisper (visibilitychange)
+    function restoreTabTitle() {
+      clearTimeout(tabTimer);
+      tabTimer = null;
+      if (savedTitle) {
+        document.title = savedTitle;
+        savedTitle = '';
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearTimeout(tabTimer);
+        tabTimer = setTimeout(() => {
+          if (!document.hidden) return;
+          savedTitle = document.title;
+          document.title = isPaperPage()
+            ? '∇L(θ) 还在等你推导… · anka'
+            : 'loss 还在收敛中… · anka';
+        }, 5000);
+      } else {
+        restoreTabTitle();
+      }
+    });
+
+    // Global triggers & listeners
+    window.addEventListener('anka-trigger-nan', (e) => {
+      triggerNan(e.detail?.lr || '1e2');
+    });
+
+    window.addEventListener('anka-toggle-arxiv', () => {
+      toggleArxiv();
+    });
+
+    window.addEventListener('anka-temperature-changed', (e) => {
+      const high = Boolean(e.detail?.high);
+      if (high) {
+        unlock('temp', 'Temperature = 2.0 · 高温采样中（连点头像 5 下降温）');
+      } else {
+        showToast('Temperature = 0.7 · 已恢复常规采样', 2000);
+      }
+    });
+
+    document.addEventListener('dblclick', (e) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
+      if (target.closest('[data-arxiv-trigger]')) {
+        e.preventDefault();
+        toggleArxiv();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
+      if (target.closest('#arxiv-exit-pill')) {
+        setArxivMode(false, true);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.documentElement.classList.contains('arxiv-mode')) {
+        // Don't hijack Escape if a modal is currently open
+        const modalOpen = ['search-modal', 'shortcuts-modal', 'formula-sheet-modal', 'anka-lightbox'].some((id) => {
+          const el = document.getElementById(id);
+          return el && !el.classList.contains('hidden');
+        });
+        if (!modalOpen) {
+          setArxivMode(false, true);
+        }
+      }
+    });
+
+    function onPageLoad() {
+      restoreTabTitle();
+      updateProgressBadges();
+      applyMidnightMode();
+
+      if (isPaperPage()) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('mode') === 'arxiv') {
+          setArxivMode(true, true);
+        }
+      } else {
+        document.documentElement.classList.remove('arxiv-mode');
+      }
+    }
+
+    document.addEventListener('astro:before-swap', () => {
+      restoreTabTitle();
+      document.documentElement.classList.remove('arxiv-mode', 'loss-exploding');
+    });
+
+    document.addEventListener('astro:page-load', onPageLoad);
+
+    window.__ankaEggs = {
+      catalog: EGG_CATALOG,
+      total: TOTAL,
+      getUnlocked,
+      unlock,
+      showToast,
+      triggerNan,
+      toggleArxiv,
+      updateProgressBadges,
+    };
+
+    onPageLoad();
+  })();
+</script>

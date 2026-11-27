@@ -1,0 +1,482 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { PROJECTS, SITE } from '../site.config';
+import { formatDate } from '../utils/format';
+
+const papers = (await getCollection('papers')).sort((a, b) => a.data.order - b.data.order);
+const posts = (await getCollection('blog'))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+
+const cliPayload = {
+  site: {
+    author: SITE.author,
+    handle: SITE.handle,
+    tagline: SITE.tagline,
+    location: SITE.location,
+    email: SITE.email,
+    bio: SITE.bio,
+    github: SITE.social.github,
+    repo: SITE.social.inferringRepo,
+  },
+  papers: papers.map((p) => ({
+    number: p.data.number,
+    id: p.id,
+    title: p.data.displayTitle,
+    venue: p.data.venue ? p.data.venue.split('（')[0] : '',
+    minutes: p.data.readingMinutes,
+    formulas: p.data.formulaCount,
+    url: `/papers/${p.id}`,
+  })),
+  posts: posts.map((p) => ({
+    id: p.id,
+    title: p.data.title,
+    date: formatDate(p.data.publishedAt),
+    url: `/blog/${p.id}`,
+  })),
+  projects: PROJECTS.map((pr) => ({
+    name: pr.name,
+    repo: pr.repo,
+    url: pr.url,
+    stars: pr.stars || '',
+    desc: pr.description,
+  })),
+};
+
+const safeCliJson = JSON.stringify(cliPayload).replace(/<\/script/gi, '<\\/script');
+---
+
+<BaseLayout title="cli" description="ankaanka.org interactive hidden terminal">
+  <section class="mx-auto my-4 max-w-3xl">
+    <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+      <div class="font-mono text-xs text-[var(--text-muted)]">
+        <span class="font-semibold text-[var(--accent)]">/cli</span>
+        <span class="mx-1.5">·</span>
+        <span>ankaanka.org interactive shell</span>
+      </div>
+      <a
+        href="/"
+        class="font-mono text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--accent)]"
+      >
+        ← exit to blog
+      </a>
+    </div>
+
+    <div
+      id="anka-cli-window"
+      class="overflow-hidden rounded-2xl border border-[#3a2a54] bg-[#120d1d] text-[#e9e2f5] shadow-2xl"
+    >
+      <!-- Terminal chrome -->
+      <div class="flex items-center justify-between border-b border-[#2a1f3d] bg-[#181126] px-4 py-2.5">
+        <div class="flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#f87171]/80"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#fbbf24]/80"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#4ade80]/80"></span>
+        </div>
+        <span class="font-mono text-[11px] text-[#9b8bb8]">anka@ustc: ~/blog</span>
+        <span class="font-mono text-[10px] text-[#7c6a9c]">zsh</span>
+      </div>
+
+      <!-- Output buffer -->
+      <div
+        id="cli-output"
+        class="h-[400px] space-y-2 overflow-y-auto px-4 py-4 font-mono text-xs leading-relaxed sm:h-[440px] sm:px-5 sm:text-[13px]"
+      ></div>
+
+      <!-- Input bar -->
+      <form
+        id="cli-form"
+        class="flex items-center gap-2 border-t border-[#2a1f3d] bg-[#161023] px-4 py-3 font-mono text-xs sm:px-5 sm:text-[13px]"
+      >
+        <span class="shrink-0 text-[#c084fc]">anka@ustc:~$</span>
+        <input
+          id="cli-input"
+          type="text"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          placeholder="输入 help 查看可用命令，按 Tab 自动补全..."
+          class="w-full bg-transparent text-[#f3eefa] placeholder-[#6d5c8c] outline-none"
+        />
+      </form>
+    </div>
+
+    <!-- Subtle quick command chips -->
+    <div class="mt-4 flex flex-wrap items-center gap-2 font-mono text-[11px]">
+      <span class="text-[var(--text-muted)]">试试：</span>
+      {
+        ['help', 'whoami', 'papers', 'train --lr 3e-4', 'train --lr 1e-1', 'cat .eggs', 'sudo rm -rf /'].map(
+          (cmd) => (
+            <button
+              type="button"
+              data-cli-sample={cmd}
+              class="cursor-pointer rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[var(--text-secondary)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              {cmd}
+            </button>
+          )
+        )
+      }
+    </div>
+  </section>
+
+  <script id="anka-cli-data" type="application/json" set:html={safeCliJson} />
+</BaseLayout>
+
+<script is:inline>
+  (() => {
+    const COMMAND_LIST = [
+      'help',
+      'whoami',
+      'ls',
+      'cat',
+      'papers',
+      'blog',
+      'projects',
+      'open',
+      'train',
+      'fortune',
+      'clear',
+      'exit',
+      'sudo',
+    ];
+
+    const FORTUNES = [
+      '如果你觉得公式推得很顺，大概率是漏了一个归一化常数 Z(x)。',
+      'loss 没降，先查学习率和数据清洗，再怀疑模型架构。',
+      'KL 散度约束：允许探索，但别离参考策略太远。',
+      '能用一行闭式解说清楚的事，绝不硬塞三个超参数。',
+      '今天显存没炸、梯度没 NaN，已经是好日子了。',
+    ];
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function initCli() {
+      const win = document.getElementById('anka-cli-window');
+      const output = document.getElementById('cli-output');
+      const form = document.getElementById('cli-form');
+      const input = document.getElementById('cli-input');
+      const dataEl = document.getElementById('anka-cli-data');
+      if (!win || !output || !form || !input || !dataEl) return;
+      if (win.dataset.bound === '1') return;
+      win.dataset.bound = '1';
+
+      let data = { site: {}, papers: [], posts: [], projects: [] };
+      try {
+        data = JSON.parse(dataEl.textContent || '{}');
+      } catch {}
+
+      window.__ankaEggs?.unlock('cli', '发现隐藏终端 /cli', { onlyOnNew: true });
+
+      const history = [];
+      let historyIdx = -1;
+      let training = false;
+
+      function appendLine(html, cls = 'text-[#d6cbe8]') {
+        const div = document.createElement('div');
+        div.className = `whitespace-pre-wrap break-words ${cls}`;
+        div.innerHTML = html;
+        output.appendChild(div);
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function appendPromptEcho(cmd) {
+        appendLine(
+          `<span class="text-[#c084fc]">anka@ustc:~$</span> <span class="text-[#f8f5ff]">${escapeHtml(cmd)}</span>`
+        );
+      }
+
+      function printWelcome() {
+        appendLine(
+          `<span class="text-[#d8baff] font-semibold">Welcome to ankaanka.org shell (v2.0)</span>\n` +
+            `<span class="text-[#9b8bb8]">Type <span class="text-[#e9d5ff]">help</span> to list commands, <span class="text-[#e9d5ff]">papers</span> to browse 《推断智能》, or <span class="text-[#e9d5ff]">exit</span> to return.</span>`
+        );
+      }
+
+      async function runTrain(args) {
+        if (training) return;
+        training = true;
+        let lrStr = '3e-4';
+        const lrIdx = args.indexOf('--lr');
+        if (lrIdx !== -1 && args[lrIdx + 1]) {
+          lrStr = args[lrIdx + 1];
+        } else if (args.find((a) => a.startsWith('--lr='))) {
+          lrStr = args.find((a) => a.startsWith('--lr=')).slice(5) || '3e-4';
+        }
+        const lr = Number(lrStr);
+        const explode = !Number.isFinite(lr) || lr >= 0.05;
+
+        appendLine(
+          `<span class="text-[#9b8bb8]">[init] model=anka-dpo-7b  lr=${escapeHtml(lrStr)}  beta=0.1  device=cuda:0</span>`
+        );
+
+        const steps = explode
+          ? [
+              'step 001/005 │ loss: 0.6931 │ grad_norm:  1.42 │ kl: 0.002',
+              'step 002/005 │ loss: 2.8419 │ grad_norm: 18.70 │ kl: 0.184',
+              'step 003/005 │ loss: 47.920 │ grad_norm: 9.4e4 │ kl: 4.910',
+              'step 004/005 │ loss: NaN    │ grad_norm: inf   │ kl: NaN',
+            ]
+          : [
+              'step 001/005 │ loss: 0.6931 │ grad_norm: 0.84 │ kl: 0.004',
+              'step 002/005 │ loss: 0.5124 │ grad_norm: 0.62 │ kl: 0.011',
+              'step 003/005 │ loss: 0.3480 │ grad_norm: 0.45 │ kl: 0.019',
+              'step 004/005 │ loss: 0.2195 │ grad_norm: 0.31 │ kl: 0.026',
+              'step 005/005 │ loss: 0.1422 │ grad_norm: 0.19 │ kl: 0.031  ✓ converged',
+            ];
+
+        for (let i = 0; i < steps.length; i++) {
+          await new Promise((r) => setTimeout(r, 340));
+          const isNanStep = explode && i === steps.length - 1;
+          appendLine(
+            escapeHtml(steps[i]),
+            isNanStep ? 'text-[#f87171] font-semibold' : 'text-[#c9bce0]'
+          );
+        }
+
+        if (explode) {
+          appendLine(
+            `<span class="text-[#f87171]">RuntimeError: loss diverged to NaN — restoring last safe checkpoint...</span>`
+          );
+          window.dispatchEvent(new CustomEvent('anka-trigger-nan', { detail: { lr: lrStr } }));
+        } else {
+          appendLine(`<span class="text-[#4ade80]">[done] checkpoint saved -> ./ckpt/anka-step-005.pt</span>`);
+        }
+        training = false;
+      }
+
+      async function execute(raw) {
+        const trimmed = raw.trim();
+        if (!trimmed) return;
+        appendPromptEcho(trimmed);
+        history.push(trimmed);
+        historyIdx = history.length;
+
+        const parts = trimmed.split(/\s+/);
+        const cmd = parts[0].toLowerCase();
+        const args = parts.slice(1);
+
+        if (cmd === 'help') {
+          appendLine(
+            [
+              '<span class="text-[#d8baff]">可用命令：</span>',
+              '  whoami              查看站长信息',
+              '  ls                  列出虚拟目录文件',
+              '  cat &lt;file&gt;          读取 about.md / llms.txt / .eggs',
+              '  papers              列出《推断智能》全部论文笔记',
+              '  blog                列出最新随笔',
+              '  projects            查看开源项目',
+              '  open &lt;num|slug&gt;     跳转到对应论文或随笔（如 open 01）',
+              '  train [--lr 3e-4]   跑一段 5 步训练（试试 --lr 1e-1）',
+              '  fortune             随机一条炼丹语录',
+              '  clear / exit        清屏 / 返回博客首页',
+            ].join('\n')
+          );
+          return;
+        }
+
+        if (cmd === 'whoami') {
+          appendLine(
+            `<span class="text-[#d8baff] font-semibold">${escapeHtml(data.site.author)}</span> (${escapeHtml(data.site.handle)})\n` +
+              `${escapeHtml(data.site.tagline)} · ${escapeHtml(data.site.location)}\n` +
+              `${escapeHtml(data.site.bio)}\n` +
+              `<span class="text-[#9b8bb8]">email:</span> ${escapeHtml(data.site.email)}  <span class="text-[#9b8bb8]">github:</span> ${escapeHtml(data.site.github)}`
+          );
+          return;
+        }
+
+        if (cmd === 'ls') {
+          appendLine(
+            '<span class="text-[#c084fc]">papers/</span>   <span class="text-[#c084fc]">blog/</span>   about.md   projects.json   llms.txt   <span class="text-[#9b8bb8]">.eggs</span>'
+          );
+          return;
+        }
+
+        if (cmd === 'cat') {
+          const file = (args[0] || '').toLowerCase();
+          if (!file) {
+            appendLine('usage: cat &lt;about.md | llms.txt | .eggs&gt;', 'text-[#fbbf24]');
+            return;
+          }
+          if (file === 'about.md') {
+            appendLine(`# ${escapeHtml(data.site.author)}\n${escapeHtml(data.site.bio)}\n\n-> 访问 /about 查看完整简历。`);
+          } else if (file === 'llms.txt') {
+            appendLine('已为你准备机器可读索引 -> <a href="/llms.txt" class="text-[#d8baff] underline">/llms.txt</a>');
+          } else if (file === '.eggs' || file === 'eggs') {
+            const api = window.__ankaEggs;
+            if (!api) {
+              appendLine('egg tracker unavailable');
+              return;
+            }
+            const unlocked = api.getUnlocked();
+            const lines = api.catalog.map((item) => {
+              const ok = unlocked.includes(item.id);
+              const mark = ok
+                ? '<span class="text-[#4ade80]">[✓]</span>'
+                : '<span class="text-[#6d5c8c]">[ ]</span>';
+              const text = ok ? escapeHtml(item.label) : '<span class="text-[#6d5c8c]">??? (尚未触发)</span>';
+              return `  ${mark} ${escapeHtml(item.id.padEnd(8))} ${text}`;
+            });
+            appendLine(
+              `<span class="text-[#d8baff]">彩蛋收集进度：${unlocked.length}/${api.total}</span>\n` +
+                lines.join('\n')
+            );
+          } else {
+            appendLine(`cat: ${escapeHtml(file)}: No such file`, 'text-[#f87171]');
+          }
+          return;
+        }
+
+        if (cmd === 'papers') {
+          const rows = data.papers.map(
+            (p) =>
+              `  <span class="text-[#c084fc]">#${escapeHtml(p.number)}</span>  <a href="${escapeHtml(p.url)}" class="text-[#f3eefa] underline decoration-[#5b4280] underline-offset-2 hover:text-[#d8baff]">${escapeHtml(p.title)}</a>` +
+              `\n      <span class="text-[#8f7fae]">${escapeHtml(p.id)} · 约 ${p.minutes} 分钟 · ${p.formulas} 块公式${p.venue ? ' · ' + escapeHtml(p.venue) : ''}</span>`
+          );
+          appendLine(rows.join('\n'));
+          return;
+        }
+
+        if (cmd === 'blog') {
+          const rows = data.posts.map(
+            (p) =>
+              `  <span class="text-[#9b8bb8]">${escapeHtml(p.date)}</span>  <a href="${escapeHtml(p.url)}" class="text-[#f3eefa] underline decoration-[#5b4280] underline-offset-2 hover:text-[#d8baff]">${escapeHtml(p.title)}</a>`
+          );
+          appendLine(rows.join('\n') || '暂无随笔');
+          return;
+        }
+
+        if (cmd === 'projects') {
+          const rows = data.projects.map(
+            (p) =>
+              `  <span class="text-[#d8baff]">${escapeHtml(p.name)}</span> ${p.stars ? `<span class="text-[#fbbf24]">★${escapeHtml(p.stars)}</span>` : ''}\n      <span class="text-[#9b8bb8]">${escapeHtml(p.desc)}</span>`
+          );
+          appendLine(rows.join('\n'));
+          return;
+        }
+
+        if (cmd === 'open') {
+          const q = (args[0] || '').toLowerCase().replace(/^#/, '');
+          if (!q) {
+            appendLine('usage: open &lt;01 | dpo | mamba | nlhf | ...&gt;', 'text-[#fbbf24]');
+            return;
+          }
+          const paper = data.papers.find(
+            (p) => p.number === q || p.number === q.padStart(2, '0') || p.id.toLowerCase().includes(q)
+          );
+          if (paper) {
+            appendLine(`Opening ${escapeHtml(paper.url)} ...`, 'text-[#4ade80]');
+            window.location.href = paper.url;
+            return;
+          }
+          const post = data.posts.find((p) => p.id.toLowerCase().includes(q));
+          if (post) {
+            appendLine(`Opening ${escapeHtml(post.url)} ...`, 'text-[#4ade80]');
+            window.location.href = post.url;
+            return;
+          }
+          appendLine(`open: 未找到匹配 "${escapeHtml(q)}" 的文章`, 'text-[#f87171]');
+          return;
+        }
+
+        if (cmd === 'train') {
+          await runTrain(args);
+          return;
+        }
+
+        if (cmd === 'fortune') {
+          const pick = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+          appendLine(`∑ ${escapeHtml(pick)}`, 'text-[#d8baff]');
+          return;
+        }
+
+        if (cmd === 'sudo') {
+          appendLine(
+            'PermissionError: KL(π_new ‖ π_ref) = +∞ — 拒绝偏离参考策略，当前目录受只读约束保护。',
+            'text-[#f87171]'
+          );
+          return;
+        }
+
+        if (cmd === 'clear') {
+          output.innerHTML = '';
+          return;
+        }
+
+        if (cmd === 'exit' || cmd === 'quit') {
+          appendLine('logout · 正在返回博客首页...', 'text-[#9b8bb8]');
+          window.location.href = '/';
+          return;
+        }
+
+        appendLine(
+          `zsh: command not found: ${escapeHtml(cmd)}（输入 <span class="text-[#d8baff]">help</span> 查看可用命令）`,
+          'text-[#f87171]'
+        );
+      }
+
+      printWelcome();
+      input.focus();
+
+      win.addEventListener('click', (e) => {
+        if (e.target instanceof Element && e.target.closest('a')) return;
+        input.focus();
+      });
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const val = input.value;
+        input.value = '';
+        execute(val);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (historyIdx > 0) {
+            historyIdx -= 1;
+            input.value = history[historyIdx] || '';
+          }
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (historyIdx < history.length - 1) {
+            historyIdx += 1;
+            input.value = history[historyIdx] || '';
+          } else {
+            historyIdx = history.length;
+            input.value = '';
+          }
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          const cur = input.value.trim().toLowerCase();
+          if (!cur) return;
+          const hit = COMMAND_LIST.find((c) => c.startsWith(cur));
+          if (hit) input.value = hit + ' ';
+        }
+      });
+
+      document.querySelectorAll('[data-cli-sample]').forEach((btn) => {
+        if (btn.dataset.bound === '1') return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', () => {
+          const sample = btn.getAttribute('data-cli-sample') || '';
+          input.value = '';
+          execute(sample);
+          input.focus();
+        });
+      });
+    }
+
+    if (!window.__ankaCliPageInit) {
+      window.__ankaCliPageInit = true;
+      document.addEventListener('astro:page-load', initCli);
+    }
+    initCli();
+  })();
+</script>

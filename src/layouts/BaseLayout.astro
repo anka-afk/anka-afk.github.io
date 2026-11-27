@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
 import SearchModal from '../components/SearchModal.astro';
 import ShortcutsModal from '../components/ShortcutsModal.astro';
+import EasterEggs from '../components/EasterEggs.astro';
 import { SITE } from '../site.config';
 
 interface Props {
@@ -31,6 +32,11 @@ const ogImage = new URL(image || '/og/home.svg', SITE.url).toString();
 <html lang="zh-CN" class="antialiased">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      你好，正在看源码的同行。
+      r(x, y) = β · log(π_θ(y|x) / π_ref(y|x)) + β · log Z(x)
+      别急着走：试试按 / 输入 > ，或者直接访问 /cli、/404、/llms.txt。
+    -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href={canonicalURL} />
@@ -86,6 +92,7 @@ const ogImage = new URL(image || '/og/home.svg', SITE.url).toString();
     <Footer />
     <SearchModal />
     <ShortcutsModal />
+    <EasterEggs />
 
     <!-- Delegated cursor spotlight + DevTools console Easter egg -->
     <script is:inline>
@@ -114,6 +121,11 @@ const ogImage = new URL(image || '/og/home.svg', SITE.url).toString();
             '今天显存没炸、梯度没 NaN，那就是值得庆祝的一天。',
             '提示：首页连续点头像 5 下，或者按 / 后输入 > 试试命令模式。',
           ];
+          const midnightQuotes = [
+            '凌晨还在翻代码和论文？记得保存 checkpoint，早点睡。',
+            '03:00 的规律：这个时候调出来的超参，明早大概率复现不了。',
+            'GPU 不会困，但人会。先把这步梯度算完就休息吧。',
+          ];
 
           console.log(
             '%c anka.org %c 欢迎打开 F12 · 这里只有手推公式、/llms.txt 和认真维护的代码。输入 anka() 试试。',
@@ -122,6 +134,7 @@ const ogImage = new URL(image || '/og/home.svg', SITE.url).toString();
           );
 
           window.anka = (cmd) => {
+            window.__ankaEggs?.unlock('console', '在控制台唤醒了 anka()', { onlyOnNew: true });
             if (cmd === '404') {
               window.location.href = '/404';
               return '正在带你掉进局部极小值…';
@@ -130,13 +143,39 @@ const ogImage = new URL(image || '/og/home.svg', SITE.url).toString();
               window.location.href = '/llms.txt';
               return '正在打开 /llms.txt…';
             }
+            if (cmd === 'cli' || cmd === 'sh') {
+              window.location.href = '/cli';
+              return '正在切入隐藏终端 /cli…';
+            }
             if (cmd === 'temp') {
               window.dispatchEvent(new CustomEvent('anka-temperature-toggle'));
               return '已切换 Attention 画布采样温度';
             }
-            const pick = quotes[Math.floor(Math.random() * quotes.length)];
+            if (cmd === 'nan') {
+              window.dispatchEvent(new CustomEvent('anka-trigger-nan', { detail: { lr: '1e2' } }));
+              return 'RuntimeError: loss is NaN (已自动回滚)';
+            }
+            if (cmd === 'arxiv') {
+              window.dispatchEvent(new CustomEvent('anka-toggle-arxiv'));
+              return '已切换 arXiv 预印本排版';
+            }
+            if (cmd === 'eggs') {
+              const api = window.__ankaEggs;
+              if (!api) return '彩蛋系统未初始化';
+              const unlocked = api.getUnlocked();
+              const lines = api.catalog.map(
+                (item) => `  [${unlocked.includes(item.id) ? '✓' : ' '}] ${item.id.padEnd(8)} ${item.label}`
+              );
+              console.log(`彩蛋进度 ${unlocked.length}/${api.total}:\n` + lines.join('\n'));
+              return `${unlocked.length}/${api.total}`;
+            }
+            const hour = new Date().getHours();
+            const pool = hour >= 0 && hour < 5 ? midnightQuotes : quotes;
+            const pick = pool[Math.floor(Math.random() * pool.length)];
             console.log(
-              '%c∑ anka()%c ' + pick + '\n%c可用参数：anka("temp") | anka("llms") | anka("404")',
+              '%c∑ anka()%c ' +
+                pick +
+                '\n%c可用参数：anka("cli") | anka("arxiv") | anka("nan") | anka("temp") | anka("eggs") | anka("404")',
               'color:#63418E;font-weight:700;font-family:monospace;',
               'color:inherit;',
               'color:#888;font-family:monospace;'

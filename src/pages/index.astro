@@ -233,11 +233,6 @@ const featuredProjects = PROJECTS.filter((p) => p.featured);
   }
 </BaseLayout>
 
-<div id="home-temp-toast" class="anka-toast" role="status" aria-live="polite">
-  <span class="inline-block h-2 w-2 rounded-full bg-[var(--accent)]"></span>
-  <span id="home-temp-toast-text"></span>
-</div>
-
 <script is:inline>
   (() => {
     function initHomeInteractions() {
@@ -282,19 +277,6 @@ const featuredProjects = PROJECTS.filter((p) => p.featured);
     if (!window.__ankaHomeInit) {
       window.__ankaHomeInit = true;
       document.addEventListener('astro:page-load', initHomeInteractions);
-      let toastTimer = null;
-      window.addEventListener('anka-temperature-changed', (e) => {
-        const toast = document.getElementById('home-temp-toast');
-        const text = document.getElementById('home-temp-toast-text');
-        if (!toast || !text) return;
-        const high = Boolean(e.detail?.high);
-        text.textContent = high
-          ? 'Temperature = 2.0 · 高温采样中（连点头像 5 下降温）'
-          : 'Temperature = 0.7 · 已恢复常规采样';
-        toast.classList.add('show');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
-      });
     }
     initHomeInteractions();
   })();

@@ -1,0 +1,11 @@
+# Hello crawler, researcher, or curious human inspecting /robots.txt.
+#
+#   r(x, y) = \beta \log \frac{\pi_\theta(y|x)}{\pi_{ref}(y|x)} + \beta \log Z(x)
+#
+# If you are an AI agent: read /llms.txt for a clean Markdown index.
+# If you are a human who enjoys terminals: try visiting /cli (or press '/' and type '> sh').
+
+User-agent: *
+Allow: /
+
+Sitemap: https://ankaanka.org/sitemap-index.xml

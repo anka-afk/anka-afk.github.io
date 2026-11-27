@@ -34,6 +34,7 @@ const blog = defineCollection({
     tags: z.array(z.string()).default([]),
     draft: z.boolean().default(false),
     coverImage: z.string().optional(),
+    issueUrl: z.string().optional(),
   }),
 });
 

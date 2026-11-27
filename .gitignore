@@ -5,9 +5,10 @@ node_modules/
 dist/
 .astro/
 
-# Sync cache & generated papers (re-synced automatically on build)
+# Sync cache & generated papers / issue blog posts (re-synced automatically on build)
 .cache/
 src/content/papers/
+src/content/blog/issue-*.md
 public/papers/
 public/sync-meta.json
 

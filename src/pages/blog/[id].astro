@@ -65,6 +65,18 @@ const safeMarkdownJson = JSON.stringify(cleanMarkdown).replace(/<\/script/gi, '<
       </div>
 
       <div class="flex items-center gap-4">
+        {
+          post.data.issueUrl && (
+            <a
+              href={post.data.issueUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="zen-hide transition-colors hover:text-[var(--accent)]"
+            >
+              原 Issue ↗
+            </a>
+          )
+        }
         <button
           type="button"
           data-copy-markdown
